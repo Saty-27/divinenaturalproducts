@@ -49,6 +49,7 @@ __export(schema_exports, {
   insertMilkSubscriptionSchema: () => insertMilkSubscriptionSchema,
   insertOrderSchema: () => insertOrderSchema,
   insertProductSchema: () => insertProductSchema,
+  insertSiteSettingsSchema: () => insertSiteSettingsSchema,
   insertSubscriptionSchema: () => insertSubscriptionSchema,
   insertSupportTicketSchema: () => insertSupportTicketSchema,
   insertTicketMessageSchema: () => insertTicketMessageSchema,
@@ -65,6 +66,7 @@ __export(schema_exports, {
   productVendorsRelations: () => productVendorsRelations,
   products: () => products,
   sessions: () => sessions,
+  siteSettings: () => siteSettings,
   statsCounters: () => statsCounters,
   subscriptionDeliveries: () => subscriptionDeliveries,
   subscriptionDeliveriesRelations: () => subscriptionDeliveriesRelations,
@@ -91,7 +93,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
-var sessions, users2, categories, products, vendors, deliveryPartners, deliveryAssignments, drivers, admins, delegationLogs, orders, orderItems, milkSubscriptions, subscriptionDeliveries, cart, cartItems, addresses, supportTickets, ticketMessages, productVendors, notifications, bills, subscriptionsRelations, subscriptionDeliveriesRelations, ordersRelations, orderItemsRelations, vendorsRelations, deliveryPartnersRelations, driversRelations, adminsRelations, cartRelations, cartItemsRelations, addressesRelations, productVendorsRelations, billsRelations, banners, homepageSections, ethosCards, productDeals, statsCounters, faqs2, newsletterSettings, footerSettings, aboutUsSettings, contactSettings, termsOfServiceSettings, privacyPolicySettings, contactSubmissions, insertAddressSchema, insertOrderSchema, insertSubscriptionSchema, insertMilkSubscriptionSchema, insertSupportTicketSchema, insertTicketMessageSchema, insertProductSchema, insertBannerSchema, insertHomepageSectionSchema, insertContactSubmissionSchema;
+var sessions, users2, categories, products, vendors, deliveryPartners, deliveryAssignments, drivers, admins, delegationLogs, orders, orderItems, milkSubscriptions, subscriptionDeliveries, cart, cartItems, addresses, supportTickets, ticketMessages, productVendors, notifications, bills, subscriptionsRelations, subscriptionDeliveriesRelations, ordersRelations, orderItemsRelations, vendorsRelations, deliveryPartnersRelations, driversRelations, adminsRelations, cartRelations, cartItemsRelations, addressesRelations, productVendorsRelations, billsRelations, banners, homepageSections, ethosCards, productDeals, statsCounters, faqs2, newsletterSettings, footerSettings, aboutUsSettings, contactSettings, termsOfServiceSettings, privacyPolicySettings, siteSettings, contactSubmissions, insertAddressSchema, insertOrderSchema, insertSubscriptionSchema, insertMilkSubscriptionSchema, insertSupportTicketSchema, insertTicketMessageSchema, insertProductSchema, insertBannerSchema, insertHomepageSectionSchema, insertContactSubmissionSchema, insertSiteSettingsSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -156,6 +158,7 @@ var init_schema = __esm({
       // Flag for featured products
       launchedAt: timestamp("launched_at"),
       // When product was launched (for sorting new products)
+      redirectUrl: varchar("redirect_url"),
       createdAt: timestamp("created_at").defaultNow()
     });
     vendors = pgTable("vendors", {
@@ -509,9 +512,9 @@ var init_schema = __esm({
     }));
     banners = pgTable("banners", {
       id: serial("id").primaryKey(),
-      title: varchar("title").notNull(),
+      title: varchar("title"),
       subtitle: text("subtitle"),
-      imageUrl: varchar("image_url").notNull(),
+      imageUrl: varchar("image_url"),
       // Desktop image (default/fallback)
       imageUrlTablet: varchar("image_url_tablet"),
       // Tablet image (768px-1024px)
@@ -525,6 +528,7 @@ var init_schema = __esm({
       // "25% OFF", "New", "Best Seller"
       displayOrder: integer("display_order").default(0),
       isActive: boolean("is_active").default(true),
+      showOverlay: boolean("show_overlay").default(false),
       startDate: timestamp("start_date"),
       endDate: timestamp("end_date"),
       createdAt: timestamp("created_at").defaultNow(),
@@ -623,27 +627,47 @@ var init_schema = __esm({
     });
     aboutUsSettings = pgTable("about_us_settings", {
       id: serial("id").primaryKey(),
-      title: varchar("title").default("About Divine Naturals"),
-      subtitle: text("subtitle"),
-      content: text("content"),
-      imageUrl: varchar("image_url"),
-      mission: text("mission"),
-      vision: text("vision"),
+      // Section 1: Hero
+      heroTitle: varchar("hero_title").default("Our Story"),
+      heroSubtitle: text("hero_subtitle"),
+      heroImageUrl: varchar("hero_image_url"),
+      heroCtaText: varchar("hero_cta_text"),
+      heroCtaLink: varchar("hero_cta_link"),
+      // Section 2: Story
+      storyHeading: varchar("story_heading"),
+      storyDescription: text("story_description"),
+      // Rich text
+      storyImageUrl: varchar("story_image_url"),
+      // Section 3: Values
+      valuesTitle: varchar("values_title").default("Our Core Values"),
       values: jsonb("values"),
-      // Array of { title, description }
+      // Array of { icon, title, description }
+      // Section 4: Process
+      processTitle: varchar("process_title").default("How It Works"),
+      processSteps: jsonb("process_steps"),
+      // Array of { icon, title, description }
+      // Section 5: CTA
+      ctaHeading: varchar("cta_heading"),
+      ctaSubheading: text("cta_subheading"),
+      ctaButtonText: varchar("cta_button_text"),
+      ctaButtonLink: varchar("cta_button_link"),
       isActive: boolean("is_active").default(true),
       updatedAt: timestamp("updated_at").defaultNow()
     });
     contactSettings = pgTable("contact_settings", {
       id: serial("id").primaryKey(),
-      title: varchar("title").default("Contact Us"),
-      subtitle: text("subtitle"),
+      // Section 1: Hero
+      heroTitle: varchar("hero_title").default("Contact Us"),
+      heroSubtitle: text("hero_subtitle"),
+      heroImageUrl: varchar("hero_image_url"),
+      // Section 2: Info
       phone: varchar("phone"),
       email: varchar("email"),
       address: text("address"),
       businessHours: text("business_hours"),
       socialLinks: jsonb("social_links"),
-      mapEmbedUrl: varchar("map_embed_url"),
+      mapEmbedUrl: text("map_embed_url"),
+      // Use text for long iframe links
       isActive: boolean("is_active").default(true),
       updatedAt: timestamp("updated_at").defaultNow()
     });
@@ -667,10 +691,20 @@ var init_schema = __esm({
       isActive: boolean("is_active").default(true),
       updatedAt: timestamp("updated_at").defaultNow()
     });
+    siteSettings = pgTable("site_settings", {
+      id: serial("id").primaryKey(),
+      brandName: varchar("brand_name").notNull().default("Divine Naturals"),
+      logoUrl: varchar("logo_url"),
+      faviconUrl: varchar("favicon_url"),
+      primaryColor: varchar("primary_color").default("#16A34A"),
+      secondaryColor: varchar("secondary_color").default("#FFF9F2"),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
     contactSubmissions = pgTable("contact_submissions", {
       id: serial("id").primaryKey(),
       name: varchar("name").notNull(),
       email: varchar("email").notNull(),
+      phone: varchar("phone"),
       message: text("message").notNull(),
       status: varchar("status").default("new"),
       // new, read, replied
@@ -687,6 +721,7 @@ var init_schema = __esm({
     insertBannerSchema = createInsertSchema(banners);
     insertHomepageSectionSchema = createInsertSchema(homepageSections);
     insertContactSubmissionSchema = createInsertSchema(contactSubmissions);
+    insertSiteSettingsSchema = createInsertSchema(siteSettings);
   }
 });
 
@@ -696,22 +731,28 @@ __export(db_exports, {
   db: () => db,
   pool: () => pool
 });
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool as NeonPool, neonConfig } from "@neondatabase/serverless";
+import { drizzle as neonDrizzle } from "drizzle-orm/neon-serverless";
+import pkg from "pg";
+import { drizzle as pgDrizzle } from "drizzle-orm/node-postgres";
 import ws from "ws";
-var pool, db;
+var PgPool, isNeon, pool, db;
 var init_db = __esm({
   "server/db.ts"() {
     "use strict";
     init_schema();
-    neonConfig.webSocketConstructor = ws;
+    ({ Pool: PgPool } = pkg);
     if (!process.env.DATABASE_URL) {
       throw new Error(
         "DATABASE_URL must be set. Did you forget to provision a database?"
       );
     }
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    db = drizzle({ client: pool, schema: schema_exports });
+    isNeon = process.env.DATABASE_URL.includes("neon.tech");
+    pool = isNeon ? new NeonPool({ connectionString: process.env.DATABASE_URL }) : new PgPool({ connectionString: process.env.DATABASE_URL });
+    if (isNeon) {
+      neonConfig.webSocketConstructor = ws;
+    }
+    db = isNeon ? neonDrizzle({ client: pool, schema: schema_exports }) : pgDrizzle({ client: pool, schema: schema_exports });
   }
 });
 
@@ -721,7 +762,7 @@ __export(generateInvoice_exports, {
   createInvoiceHTML: () => createInvoiceHTML,
   getBillInvoiceData: () => getBillInvoiceData
 });
-import { eq as eq19 } from "drizzle-orm";
+import { eq as eq18 } from "drizzle-orm";
 function createInvoiceHTML(data) {
   const createdDate = (/* @__PURE__ */ new Date()).toLocaleDateString("en-IN", {
     year: "numeric",
@@ -1032,10 +1073,10 @@ function createInvoiceHTML(data) {
   return html;
 }
 async function getBillInvoiceData(billId) {
-  const bill = await db.select().from(bills).where(eq19(bills.id, billId));
+  const bill = await db.select().from(bills).where(eq18(bills.id, billId));
   if (!bill.length) return null;
   const billRecord = bill[0];
-  const user = await db.select().from(users2).where(eq19(users2.id, billRecord.userId));
+  const user = await db.select().from(users2).where(eq18(users2.id, billRecord.userId));
   if (!user.length) return null;
   const monthNames = [
     "January",
@@ -1081,10 +1122,11 @@ var init_generateInvoice = __esm({
 });
 
 // server/index.ts
+import "dotenv/config";
 import express2 from "express";
 import fileUpload from "express-fileupload";
 import cron from "node-cron";
-import path3 from "path";
+import path4 from "path";
 
 // server/routes.ts
 import { createServer } from "http";
@@ -1107,6 +1149,16 @@ var DatabaseStorage = class {
         updatedAt: /* @__PURE__ */ new Date()
       }
     }).returning();
+    return user;
+  }
+  async updateUser(id, userData) {
+    const [user] = await db.update(users2).set({
+      ...userData,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq(users2.id, id)).returning();
+    if (!user) {
+      throw new Error("User not found");
+    }
     return user;
   }
   // Get user by email
@@ -1168,8 +1220,48 @@ var DatabaseStorage = class {
     return newOrder;
   }
   async updateOrderStatus(id, status) {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
     const [updatedOrder] = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
+    if (status.toUpperCase() === "DELIVERED" && order && order.status.toUpperCase() !== "DELIVERED") {
+      const items = await this.getOrderItemsByOrder(id);
+      for (const item of items) {
+        await this.decrementProductStock(item.productId, item.quantity);
+        await this.recordStockMovement({
+          productId: item.productId,
+          type: "OUT",
+          reason: "ORDER_DELIVERED",
+          quantity: item.quantity,
+          previousStock: 0,
+          // Would need more queries to get exact
+          newStock: 0,
+          notes: `Order #${id} delivered`
+        });
+      }
+    }
     return updatedOrder;
+  }
+  async decrementProductStock(productId, quantity) {
+    const [product] = await db.select().from(products).where(eq(products.id, productId));
+    if (product) {
+      const newStock = Math.max(0, (product.stock || 0) - quantity);
+      await db.update(products).set({ stock: newStock }).where(eq(products.id, productId));
+    }
+  }
+  async updateVendorRequirement(vendorId, liters) {
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.id, vendorId));
+    if (vendor) {
+      const currentCirculated = vendor.circulatedLiters || 0;
+      const currentRequirement = vendor.requirementToday || 0;
+      const newCirculated = currentCirculated + liters;
+      const newRequirement = Math.max(0, currentRequirement - liters);
+      await db.update(vendors).set({
+        circulatedLiters: newCirculated,
+        requirementToday: newRequirement
+      }).where(eq(vendors.id, vendorId));
+    }
+  }
+  async recordStockMovement(movement) {
+    console.log("\u{1F4E6} Stock Movement Recorded:", movement);
   }
   async getOrdersForDelivery(deliveryPartnerId) {
     return await db.select().from(orders).where(eq(orders.deliveryPartnerId, deliveryPartnerId)).orderBy(asc(orders.deliveryDate));
@@ -1372,7 +1464,174 @@ var DatabaseStorage = class {
       lowStockProducts
     };
   }
-  // Stock movement functions removed - table not in schema
+  // Banner operations
+  async getBanners() {
+    const { banners: banners2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    return await db.select().from(banners2).orderBy(asc(banners2.displayOrder));
+  }
+  async getActiveBanners() {
+    const { banners: banners2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const now = /* @__PURE__ */ new Date();
+    return await db.select().from(banners2).where(
+      and(
+        eq(banners2.isActive, true),
+        or(isNull(banners2.startDate), lte(banners2.startDate, now)),
+        or(isNull(banners2.endDate), gte(banners2.endDate, now))
+      )
+    ).orderBy(asc(banners2.displayOrder));
+  }
+  async createBanner(bannerData) {
+    const { banners: banners2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const [banner] = await db.insert(banners2).values(bannerData).returning();
+    return banner;
+  }
+  async updateBanner(id, bannerData) {
+    const { banners: banners2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const [banner] = await db.update(banners2).set({ ...bannerData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(banners2.id, id)).returning();
+    return banner;
+  }
+  async deleteBanner(id) {
+    const { banners: banners2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    await db.delete(banners2).where(eq(banners2.id, id));
+  }
+  // Homepage CMS operations
+  async getEthosCards() {
+    const { ethosCards: ethosCards2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    return await db.select().from(ethosCards2).orderBy(asc(ethosCards2.displayOrder));
+  }
+  async getActiveEthosCards() {
+    const { ethosCards: ethosCards2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    return await db.select().from(ethosCards2).where(eq(ethosCards2.isActive, true)).orderBy(asc(ethosCards2.displayOrder));
+  }
+  async getStatsCounters() {
+    const { statsCounters: statsCounters2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    return await db.select().from(statsCounters2).orderBy(asc(statsCounters2.displayOrder));
+  }
+  async getActiveStatsCounters() {
+    const { statsCounters: statsCounters2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    return await db.select().from(statsCounters2).where(eq(statsCounters2.isActive, true)).orderBy(asc(statsCounters2.displayOrder));
+  }
+  async getFAQs() {
+    const { faqs: faqs3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    return await db.select().from(faqs3).orderBy(asc(faqs3.displayOrder));
+  }
+  async getActiveFAQs() {
+    const { faqs: faqs3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    return await db.select().from(faqs3).where(eq(faqs3.isActive, true)).orderBy(asc(faqs3.displayOrder));
+  }
+  async getNewsletterSettings() {
+    const { newsletterSettings: newsletterSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const [settings] = await db.select().from(newsletterSettings2).limit(1);
+    return settings || null;
+  }
+  async getFooterSettings() {
+    const { footerSettings: footerSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const [settings] = await db.select().from(footerSettings2).limit(1);
+    return settings || null;
+  }
+  async updateNewsletterSettings(settingsData) {
+    const { newsletterSettings: newsletterSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const existing = await this.getNewsletterSettings();
+    if (existing) {
+      const [updated] = await db.update(newsletterSettings2).set({ ...settingsData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(newsletterSettings2.id, existing.id)).returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(newsletterSettings2).values(settingsData).returning();
+      return created;
+    }
+  }
+  async updateFooterSettings(settingsData) {
+    const { footerSettings: footerSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const existing = await this.getFooterSettings();
+    if (existing) {
+      const [updated] = await db.update(footerSettings2).set({ ...settingsData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(footerSettings2.id, existing.id)).returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(footerSettings2).values(settingsData).returning();
+      return created;
+    }
+  }
+  // CMS Settings operations
+  async getAboutUsSettings() {
+    const { aboutUsSettings: aboutUsSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const [settings] = await db.select().from(aboutUsSettings2).limit(1);
+    return settings || null;
+  }
+  async getContactSettings() {
+    const { contactSettings: contactSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const [settings] = await db.select().from(contactSettings2).limit(1);
+    return settings || null;
+  }
+  async getTermsOfServiceSettings() {
+    const { termsOfServiceSettings: termsOfServiceSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const [settings] = await db.select().from(termsOfServiceSettings2).limit(1);
+    return settings || null;
+  }
+  async getPrivacyPolicySettings() {
+    const { privacyPolicySettings: privacyPolicySettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const [settings] = await db.select().from(privacyPolicySettings2).limit(1);
+    return settings || null;
+  }
+  async updateAboutUsSettings(settingsData) {
+    const { aboutUsSettings: aboutUsSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const existing = await this.getAboutUsSettings();
+    if (existing) {
+      const [updated] = await db.update(aboutUsSettings2).set({ ...settingsData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(aboutUsSettings2.id, existing.id)).returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(aboutUsSettings2).values(settingsData).returning();
+      return created;
+    }
+  }
+  async updateContactSettings(settingsData) {
+    const { contactSettings: contactSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const existing = await this.getContactSettings();
+    if (existing) {
+      const [updated] = await db.update(contactSettings2).set({ ...settingsData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(contactSettings2.id, existing.id)).returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(contactSettings2).values(settingsData).returning();
+      return created;
+    }
+  }
+  async updateTermsOfServiceSettings(settingsData) {
+    const { termsOfServiceSettings: termsOfServiceSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const existing = await this.getTermsOfServiceSettings();
+    if (existing) {
+      const [updated] = await db.update(termsOfServiceSettings2).set({ ...settingsData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(termsOfServiceSettings2.id, existing.id)).returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(termsOfServiceSettings2).values(settingsData).returning();
+      return created;
+    }
+  }
+  async updatePrivacyPolicySettings(settingsData) {
+    const { privacyPolicySettings: privacyPolicySettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const existing = await this.getPrivacyPolicySettings();
+    if (existing) {
+      const [updated] = await db.update(privacyPolicySettings2).set({ ...settingsData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(privacyPolicySettings2.id, existing.id)).returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(privacyPolicySettings2).values(settingsData).returning();
+      return created;
+    }
+  }
+  async getSiteSettings() {
+    const { siteSettings: siteSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const [settings] = await db.select().from(siteSettings2).limit(1);
+    return settings || null;
+  }
+  async updateSiteSettings(settingsData) {
+    const { siteSettings: siteSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const existing = await this.getSiteSettings();
+    if (existing) {
+      const [updated] = await db.update(siteSettings2).set({ ...settingsData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(siteSettings2.id, existing.id)).returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(siteSettings2).values(settingsData).returning();
+      return created;
+    }
+  }
 };
 var storage = new DatabaseStorage();
 
@@ -1384,10 +1643,11 @@ import session from "express-session";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
+  console.warn("REPLIT_DOMAINS not provided, OIDC auth will be disabled");
 }
 var getOidcConfig = memoize(
   async () => {
+    if (!process.env.REPLIT_DOMAINS) return null;
     return await client.discovery(
       new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
       process.env.REPL_ID
@@ -1437,8 +1697,8 @@ async function setupAuth(app2) {
   app2.set("trust proxy", 1);
   const sessionMiddleware = getSession();
   app2.use((req, res, next) => {
-    const path4 = req.path;
-    if (!path4.startsWith("/api")) {
+    const path5 = req.path;
+    if (!path5.startsWith("/api")) {
       return next();
     }
     sessionMiddleware(req, res, next);
@@ -1470,17 +1730,19 @@ async function setupAuth(app2) {
     }
     verified(null, user);
   };
-  for (const domain of process.env.REPLIT_DOMAINS.split(",")) {
-    const strategy = new Strategy(
-      {
-        name: `replitauth:${domain}`,
-        config,
-        scope: "openid email profile offline_access",
-        callbackURL: `https://${domain}/api/callback`
-      },
-      verify
-    );
-    passport.use(strategy);
+  if (process.env.REPLIT_DOMAINS) {
+    for (const domain of process.env.REPLIT_DOMAINS.split(",")) {
+      const strategy = new Strategy(
+        {
+          name: `replitauth:${domain}`,
+          config,
+          scope: "openid email profile offline_access",
+          callbackURL: `https://${domain}/api/callback`
+        },
+        verify
+      );
+      passport.use(strategy);
+    }
   }
   passport.serializeUser((user, cb) => cb(null, user));
   passport.deserializeUser((user, cb) => cb(null, user));
@@ -1682,9 +1944,10 @@ function setupAuthRoutes(app2) {
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password are required" });
       }
-      const adminUsername = "DivineNaturalMDKauldeepRao";
-      const adminPassword = "DivineNaturals@2025";
+      const adminUsername = process.env.ADMIN_USERNAME || "DivineNaturalsMDKauldeepRao";
+      const adminPassword = process.env.ADMIN_PASSWORD || "DivineNaturals@2025";
       if (username !== adminUsername || password !== adminPassword) {
+        console.log("\u274C Admin login failed: Invalid credentials for", username);
         return res.status(401).json({ message: "Invalid admin credentials" });
       }
       req.session.isAdminLoggedIn = true;
@@ -1711,6 +1974,11 @@ function setupAuthRoutes(app2) {
     }
   });
   app2.get("/api/admin/current-admin", (req, res) => {
+    console.log("\u{1F50D} Checking admin session:", {
+      sessionId: req.sessionID,
+      isAdminLoggedIn: req.session?.isAdminLoggedIn,
+      username: req.session?.adminUsername
+    });
     if (!req.session?.isAdminLoggedIn) {
       return res.status(401).json({ message: "Not authenticated as admin" });
     }
@@ -2603,104 +2871,83 @@ router6.get("/me/history", async (req, res) => {
 });
 var subscription_routes_default = router6;
 
-// server/routes/admin-orders.routes.ts
+// server/routes/admin-subscriptions.routes.ts
 init_db();
 init_schema();
 import { Router as Router7 } from "express";
 import { eq as eq8 } from "drizzle-orm";
-var router7 = Router7();
-router7.get("/", async (req, res) => {
-  try {
-    const status = req.query.status;
-    let allOrders = await db.select().from(orders);
-    if (status) {
-      allOrders = allOrders.filter((o) => o.status === status);
+
+// server/middleware/auth.ts
+function checkRole(allowedRoles) {
+  return async (req, res, next) => {
+    if (req.session?.isAdminLoggedIn && allowedRoles.includes("admin")) {
+      return next();
     }
-    res.json(allOrders);
-  } catch (error) {
-    console.error("Error fetching orders:", error);
-    res.status(500).json({ message: "Failed to fetch orders" });
-  }
-});
-router7.get("/:id", async (req, res) => {
-  try {
-    const orderId = parseInt(req.params.id);
-    const order = await db.select().from(orders).where(eq8(orders.id, orderId));
-    if (!order.length) {
-      return res.status(404).json({ message: "Order not found" });
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized - Please log in" });
     }
-    const items = await db.select().from(orderItems).where(eq8(orderItems.orderId, orderId));
-    const itemsWithProducts = await Promise.all(
-      items.map(async (item) => {
-        const product = await db.query.products.findFirst({
-          where: eq8(products.id, item.productId)
+    try {
+      const freshUser = await storage.getUser(req.user.id);
+      const userRole = freshUser?.role || req.user.role;
+      if (!allowedRoles.includes(userRole)) {
+        return res.status(403).json({
+          message: `Forbidden - This endpoint requires one of these roles: ${allowedRoles.join(", ")}`,
+          yourRole: userRole
         });
-        return { ...item, product };
-      })
-    );
-    res.json({ ...order[0], items: itemsWithProducts });
-  } catch (error) {
-    console.error("Error fetching order:", error);
-    res.status(500).json({ message: "Failed to fetch order" });
+      }
+      req.user.role = userRole;
+      next();
+    } catch (error) {
+      console.error("Error checking user role:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  };
+}
+async function requireAdminAccess(req, res, next) {
+  if (req.session?.isAdminLoggedIn) {
+    console.log(`\u2705 Authorized ${req.method} ${req.originalUrl} via Admin Session`);
+    return next();
   }
-});
-router7.patch("/:id/status", async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized - Please log in" });
+  }
   try {
-    const userId = req.session?.userId || req.user?.claims?.sub;
-    const user = await db.query.users.findFirst({ where: eq8(users2.id, userId) });
-    if (user?.role !== "admin") {
-      return res.status(403).json({ message: "Admin access required" });
+    const freshUser = await storage.getUser(req.user.id);
+    const userRole = freshUser?.role || req.user.role;
+    if (userRole !== "admin") {
+      console.log(`\u{1F6AB} 403 Forbidden - Admin access required for ${req.method} ${req.originalUrl}. userRole:`, userRole);
+      return res.status(403).json({
+        message: "Admin access required (middleware/auth)",
+        yourRole: userRole
+      });
     }
-    const orderId = parseInt(req.params.id);
-    const { status, paymentStatus } = req.body;
-    const updated = await db.update(orders).set({
-      status: status || void 0,
-      paymentStatus: paymentStatus || void 0
-    }).where(eq8(orders.id, orderId)).returning();
-    if (!updated.length) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-    res.json(updated[0]);
+    req.user.role = userRole;
+    console.log(`\u2705 Authorized ${req.method} ${req.originalUrl} for user:`, freshUser?.id);
+    next();
   } catch (error) {
-    console.error("Error updating order:", error);
-    res.status(500).json({ message: "Failed to update order" });
+    console.error("Error checking user role:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
-});
-var admin_orders_routes_default = router7;
+}
+var requireCustomer = checkRole(["customer"]);
+var requireVendor = checkRole(["vendor"]);
+var requireDelivery = checkRole(["delivery"]);
+var requireAdmin = checkRole(["admin"]);
+var requireCustomerOrAdmin = checkRole(["customer", "admin"]);
+var requireVendorOrAdmin = checkRole(["vendor", "admin"]);
 
 // server/routes/admin-subscriptions.routes.ts
-init_db();
-init_schema();
-import { Router as Router8 } from "express";
-import { eq as eq9 } from "drizzle-orm";
-var router8 = Router8();
-async function checkAdminAuth(req, res) {
-  if (req.session?.isAdminLoggedIn) {
-    return true;
-  }
-  const userId = req.session?.userId || req.user?.claims?.sub;
-  if (!userId) {
-    res.status(401).json({ message: "Unauthorized" });
-    return false;
-  }
-  const user = await db.query.users.findFirst({ where: eq9(users2.id, userId) });
-  if (user?.role !== "admin") {
-    res.status(403).json({ message: "Admin access required" });
-    return false;
-  }
-  return true;
-}
-router8.get("/", async (req, res) => {
+var router7 = Router7();
+router7.get("/", requireAdminAccess, async (req, res) => {
   try {
-    if (!await checkAdminAuth(req, res)) return;
     const allSubs = await db.select().from(milkSubscriptions);
     const withDetails = await Promise.all(
       allSubs.map(async (sub) => {
         const customer = await db.query.users.findFirst({
-          where: eq9(users2.id, sub.userId)
+          where: eq8(users2.id, sub.userId)
         });
         const product = await db.query.products.findFirst({
-          where: eq9(products.id, sub.productId)
+          where: eq8(products.id, sub.productId)
         });
         return { ...sub, customer, product };
       })
@@ -2711,11 +2958,10 @@ router8.get("/", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch subscriptions" });
   }
 });
-router8.get("/today/requirement", async (req, res) => {
+router7.get("/today/requirement", requireAdminAccess, async (req, res) => {
   try {
-    if (!await checkAdminAuth(req, res)) return;
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const deliveries = await db.select().from(subscriptionDeliveries).where(eq9(subscriptionDeliveries.deliveryDate, new Date(today)));
+    const deliveries = await db.select().from(subscriptionDeliveries).where(eq8(subscriptionDeliveries.deliveryDate, new Date(today)));
     const totalRequired = deliveries.reduce((sum, d) => sum + parseFloat(d.quantity.toString()), 0);
     res.json({
       date: today,
@@ -2728,12 +2974,11 @@ router8.get("/today/requirement", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch daily requirement" });
   }
 });
-router8.patch("/:id/status", async (req, res) => {
+router7.patch("/:id/status", requireAdminAccess, async (req, res) => {
   try {
-    if (!await checkAdminAuth(req, res)) return;
     const subId = parseInt(req.params.id);
     const { status } = req.body;
-    const updated = await db.update(milkSubscriptions).set({ status }).where(eq9(milkSubscriptions.id, subId)).returning();
+    const updated = await db.update(milkSubscriptions).set({ status }).where(eq8(milkSubscriptions.id, subId)).returning();
     if (!updated.length) {
       return res.status(404).json({ message: "Subscription not found" });
     }
@@ -2743,16 +2988,15 @@ router8.patch("/:id/status", async (req, res) => {
     res.status(500).json({ message: "Failed to update subscription" });
   }
 });
-router8.post("/", async (req, res) => {
+router7.post("/", requireAdminAccess, async (req, res) => {
   try {
-    if (!await checkAdminAuth(req, res)) return;
     const { userId, productId, quantity, frequency, deliveryTime, startDate } = req.body;
     if (!userId || !productId) {
       return res.status(400).json({ message: "Customer and Product are required" });
     }
     const productIdInt = parseInt(productId);
     const product = await db.query.products.findFirst({
-      where: eq9(products.id, productIdInt)
+      where: eq8(products.id, productIdInt)
     });
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -2776,11 +3020,10 @@ router8.post("/", async (req, res) => {
     res.status(500).json({ message: "Failed to create subscription" });
   }
 });
-router8.delete("/:id", async (req, res) => {
+router7.delete("/:id", requireAdminAccess, async (req, res) => {
   try {
-    if (!await checkAdminAuth(req, res)) return;
     const subId = parseInt(req.params.id);
-    const deleted = await db.delete(milkSubscriptions).where(eq9(milkSubscriptions.id, subId)).returning();
+    const deleted = await db.delete(milkSubscriptions).where(eq8(milkSubscriptions.id, subId)).returning();
     if (!deleted.length) {
       return res.status(404).json({ message: "Subscription not found" });
     }
@@ -2790,23 +3033,23 @@ router8.delete("/:id", async (req, res) => {
     res.status(500).json({ message: "Failed to delete subscription" });
   }
 });
-var admin_subscriptions_routes_default = router8;
+var admin_subscriptions_routes_default = router7;
 
 // server/routes/admin-customers.routes.ts
 init_db();
 init_schema();
-import { Router as Router9 } from "express";
-import { eq as eq10 } from "drizzle-orm";
-var router9 = Router9();
-router9.get("/", async (req, res) => {
+import { Router as Router8 } from "express";
+import { eq as eq9 } from "drizzle-orm";
+var router8 = Router8();
+router8.get("/", async (req, res) => {
   try {
     const allCustomers = await db.query.users.findMany({
       where: (table, { ne }) => ne(table.role, "admin")
     });
     const customersWithStats = await Promise.all(
       allCustomers.map(async (customer) => {
-        const customerOrders = await db.select().from(orders).where(eq10(orders.userId, customer.id));
-        const customerSubs = await db.select().from(milkSubscriptions).where(eq10(milkSubscriptions.userId, customer.id));
+        const customerOrders = await db.select().from(orders).where(eq9(orders.userId, customer.id));
+        const customerSubs = await db.select().from(milkSubscriptions).where(eq9(milkSubscriptions.userId, customer.id));
         let totalSpending = "0";
         if (customerOrders.length > 0) {
           const total = customerOrders.reduce((sum, order) => {
@@ -2832,35 +3075,35 @@ router9.get("/", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch customers" });
   }
 });
-router9.get("/:id/orders", async (req, res) => {
+router8.get("/:id/orders", async (req, res) => {
   try {
     const customerId = req.params.id;
-    const customerOrders = await db.select().from(orders).where(eq10(orders.userId, customerId));
+    const customerOrders = await db.select().from(orders).where(eq9(orders.userId, customerId));
     res.json(customerOrders);
   } catch (error) {
     console.error("Error fetching customer orders:", error);
     res.status(500).json({ message: "Failed to fetch customer orders" });
   }
 });
-router9.get("/:id/subscriptions", async (req, res) => {
+router8.get("/:id/subscriptions", async (req, res) => {
   try {
     const customerId = req.params.id;
-    const customerSubs = await db.select().from(milkSubscriptions).where(eq10(milkSubscriptions.userId, customerId));
+    const customerSubs = await db.select().from(milkSubscriptions).where(eq9(milkSubscriptions.userId, customerId));
     res.json(customerSubs);
   } catch (error) {
     console.error("Error fetching customer subscriptions:", error);
     res.status(500).json({ message: "Failed to fetch customer subscriptions" });
   }
 });
-var admin_customers_routes_default = router9;
+var admin_customers_routes_default = router8;
 
 // server/routes/billing.routes.ts
 init_db();
 init_schema();
-import { Router as Router10 } from "express";
-import { eq as eq11, and as and7, gte as gte2, lte as lte2 } from "drizzle-orm";
+import { Router as Router9 } from "express";
+import { eq as eq10, and as and7, gte as gte3, lte as lte3 } from "drizzle-orm";
 import Razorpay from "razorpay";
-var router10 = Router10();
+var router9 = Router9();
 var razorpayInstance = null;
 var getRazorpayInstance = () => {
   if (!razorpayInstance && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
@@ -2871,12 +3114,12 @@ var getRazorpayInstance = () => {
   }
   return razorpayInstance;
 };
-router10.get("/today-requirements", async (req, res) => {
+router9.get("/today-requirements", async (req, res) => {
   try {
     const today = /* @__PURE__ */ new Date();
     const todayStr = today.toISOString().split("T")[0];
     const dayOfWeek = today.getDay();
-    const activeSubscriptions = await db.select().from(milkSubscriptions).where(eq11(milkSubscriptions.status, "ACTIVE"));
+    const activeSubscriptions = await db.select().from(milkSubscriptions).where(eq10(milkSubscriptions.status, "ACTIVE"));
     let totalLiters = 0;
     let totalDeliveries = 0;
     const subscriptionMap = /* @__PURE__ */ new Map();
@@ -2901,15 +3144,15 @@ router10.get("/today-requirements", async (req, res) => {
       }
       if (!isDeliveryDay) continue;
       const user = await db.query.users.findFirst({
-        where: eq11(users2.id, sub.userId)
+        where: eq10(users2.id, sub.userId)
       });
       const product = await db.query.products.findFirst({
-        where: eq11(products.id, sub.productId)
+        where: eq10(products.id, sub.productId)
       });
       if (user && product) {
         let defaultAddr = null;
         try {
-          const addrs = await db.select().from(addresses).where(and7(eq11(addresses.userId, sub.userId), eq11(addresses.isDefault, true))).limit(1);
+          const addrs = await db.select().from(addresses).where(and7(eq10(addresses.userId, sub.userId), eq10(addresses.isDefault, true))).limit(1);
           defaultAddr = addrs[0] || null;
         } catch (err) {
           console.error("Error fetching address:", err);
@@ -2963,28 +3206,28 @@ router10.get("/today-requirements", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch requirements" });
   }
 });
-router10.get("/current", async (req, res) => {
+router9.get("/current", async (req, res) => {
   try {
     const userId = req.session?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
     const currentDate = /* @__PURE__ */ new Date();
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
-    const subscriptions = await db.select().from(milkSubscriptions).where(and7(eq11(milkSubscriptions.userId, userId), eq11(milkSubscriptions.status, "ACTIVE")));
+    const subscriptions = await db.select().from(milkSubscriptions).where(and7(eq10(milkSubscriptions.userId, userId), eq10(milkSubscriptions.status, "ACTIVE")));
     const startDate = new Date(currentYear, currentMonth, 1);
     const endDate = new Date(currentYear, currentMonth + 1, 0);
     const monthOrders = await db.select().from(orders).where(
       and7(
-        eq11(orders.userId, userId),
-        gte2(orders.createdAt, startDate),
-        lte2(orders.createdAt, endDate)
+        eq10(orders.userId, userId),
+        gte3(orders.createdAt, startDate),
+        lte3(orders.createdAt, endDate)
       )
     );
     let subscriptionTotal = 0;
     const subscriptionItems = [];
     for (const sub of subscriptions) {
       const product = await db.query.products.findFirst({
-        where: eq11(products.id, sub.productId)
+        where: eq10(products.id, sub.productId)
       });
       if (product) {
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -3042,7 +3285,7 @@ router10.get("/current", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch billing data" });
   }
 });
-router10.get("/history", async (req, res) => {
+router9.get("/history", async (req, res) => {
   try {
     const userId = req.session?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -3050,8 +3293,8 @@ router10.get("/history", async (req, res) => {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     const historyOrders = await db.select().from(orders).where(
       and7(
-        eq11(orders.userId, userId),
-        gte2(orders.createdAt, sixMonthsAgo)
+        eq10(orders.userId, userId),
+        gte3(orders.createdAt, sixMonthsAgo)
       )
     );
     const monthlyBills = {};
@@ -3076,7 +3319,7 @@ router10.get("/history", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch billing history" });
   }
 });
-router10.post("/pay", async (req, res) => {
+router9.post("/pay", async (req, res) => {
   try {
     const userId = req.session?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -3107,7 +3350,7 @@ router10.post("/pay", async (req, res) => {
     res.status(500).json({ message: "Failed to create payment order" });
   }
 });
-router10.post("/verify-payment", async (req, res) => {
+router9.post("/verify-payment", async (req, res) => {
   try {
     const userId = req.session?.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -3125,10 +3368,10 @@ router10.post("/verify-payment", async (req, res) => {
         paymentDate: /* @__PURE__ */ new Date()
       }).where(
         and7(
-          eq11(orders.userId, userId),
-          eq11(orders.paymentStatus, "pending"),
-          gte2(orders.createdAt, startDate),
-          lte2(orders.createdAt, endDate)
+          eq10(orders.userId, userId),
+          eq10(orders.paymentStatus, "pending"),
+          gte3(orders.createdAt, startDate),
+          lte3(orders.createdAt, endDate)
         )
       );
       res.json({
@@ -3144,24 +3387,24 @@ router10.post("/verify-payment", async (req, res) => {
     res.status(500).json({ message: "Failed to verify payment" });
   }
 });
-var billing_routes_default = router10;
+var billing_routes_default = router9;
 
 // server/routes/admin-billing.routes.ts
 init_db();
 init_schema();
-import { Router as Router11 } from "express";
-import { eq as eq12, and as and8, gte as gte3, lte as lte3, sql as sql3 } from "drizzle-orm";
-var router11 = Router11();
-router11.get("/", async (req, res) => {
+import { Router as Router10 } from "express";
+import { eq as eq11, and as and8, gte as gte4, lte as lte4, sql as sql3 } from "drizzle-orm";
+var router10 = Router10();
+router10.get("/", async (req, res) => {
   try {
     const status = req.query.status;
     const userId = req.query.userId;
     let whereConditions = [];
     if (status && status !== "all") {
-      whereConditions.push(eq12(bills.status, status));
+      whereConditions.push(eq11(bills.status, status));
     }
     if (userId) {
-      whereConditions.push(eq12(bills.userId, userId));
+      whereConditions.push(eq11(bills.userId, userId));
     }
     let query = db.select().from(bills);
     if (whereConditions.length > 0) {
@@ -3171,7 +3414,7 @@ router11.get("/", async (req, res) => {
     const billsWithUsers = await Promise.all(
       allBills.map(async (bill) => {
         const user = await db.query.users.findFirst({
-          where: eq12(users2.id, bill.userId)
+          where: eq11(users2.id, bill.userId)
         });
         return { ...bill, user };
       })
@@ -3182,17 +3425,17 @@ router11.get("/", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch bills" });
   }
 });
-router11.get("/:id", async (req, res) => {
+router10.get("/:id", async (req, res) => {
   try {
     const billId = parseInt(req.params.id);
     const bill = await db.query.bills.findFirst({
-      where: eq12(bills.id, billId)
+      where: eq11(bills.id, billId)
     });
     if (!bill) {
       return res.status(404).json({ message: "Bill not found" });
     }
     const user = await db.query.users.findFirst({
-      where: eq12(users2.id, bill.userId)
+      where: eq11(users2.id, bill.userId)
     });
     res.json({ ...bill, user });
   } catch (error) {
@@ -3200,7 +3443,7 @@ router11.get("/:id", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch bill" });
   }
 });
-router11.patch("/:id/mark-paid", async (req, res) => {
+router10.patch("/:id/mark-paid", async (req, res) => {
   try {
     const billId = parseInt(req.params.id);
     const { paymentMethod } = req.body;
@@ -3209,7 +3452,7 @@ router11.patch("/:id/mark-paid", async (req, res) => {
       paymentDate: sql3`now()`,
       paymentMethod: paymentMethod || "manual",
       updatedAt: sql3`now()`
-    }).where(eq12(bills.id, billId)).returning();
+    }).where(eq11(bills.id, billId)).returning();
     if (!updated.length) {
       return res.status(404).json({ message: "Bill not found" });
     }
@@ -3219,7 +3462,7 @@ router11.patch("/:id/mark-paid", async (req, res) => {
     res.status(500).json({ message: "Failed to mark bill as paid" });
   }
 });
-router11.patch("/:id/extend-due", async (req, res) => {
+router10.patch("/:id/extend-due", async (req, res) => {
   try {
     const billId = parseInt(req.params.id);
     const { newDueDate } = req.body;
@@ -3229,7 +3472,7 @@ router11.patch("/:id/extend-due", async (req, res) => {
     const updated = await db.update(bills).set({
       dueDate: new Date(newDueDate).toISOString().split("T")[0],
       updatedAt: sql3`now()`
-    }).where(eq12(bills.id, billId)).returning();
+    }).where(eq11(bills.id, billId)).returning();
     if (!updated.length) {
       return res.status(404).json({ message: "Bill not found" });
     }
@@ -3239,7 +3482,7 @@ router11.patch("/:id/extend-due", async (req, res) => {
     res.status(500).json({ message: "Failed to extend due date" });
   }
 });
-router11.patch("/:id/penalty", async (req, res) => {
+router10.patch("/:id/penalty", async (req, res) => {
   try {
     const billId = parseInt(req.params.id);
     const { penaltyAmount } = req.body;
@@ -3247,7 +3490,7 @@ router11.patch("/:id/penalty", async (req, res) => {
       return res.status(400).json({ message: "Invalid penalty amount" });
     }
     const bill = await db.query.bills.findFirst({
-      where: eq12(bills.id, billId)
+      where: eq11(bills.id, billId)
     });
     if (!bill) {
       return res.status(404).json({ message: "Bill not found" });
@@ -3258,14 +3501,14 @@ router11.patch("/:id/penalty", async (req, res) => {
       penalty: newPenalty,
       finalAmount: newFinal,
       updatedAt: sql3`now()`
-    }).where(eq12(bills.id, billId)).returning();
+    }).where(eq11(bills.id, billId)).returning();
     res.json({ success: true, bill: updated[0], message: `Penalty of \u20B9${penaltyAmount} added` });
   } catch (error) {
     console.error("Error adding penalty:", error);
     res.status(500).json({ message: "Failed to add penalty" });
   }
 });
-router11.patch("/:id/discount", async (req, res) => {
+router10.patch("/:id/discount", async (req, res) => {
   try {
     const billId = parseInt(req.params.id);
     const { discountAmount } = req.body;
@@ -3273,7 +3516,7 @@ router11.patch("/:id/discount", async (req, res) => {
       return res.status(400).json({ message: "Invalid discount amount" });
     }
     const bill = await db.query.bills.findFirst({
-      where: eq12(bills.id, billId)
+      where: eq11(bills.id, billId)
     });
     if (!bill) {
       return res.status(404).json({ message: "Bill not found" });
@@ -3284,14 +3527,14 @@ router11.patch("/:id/discount", async (req, res) => {
       discount: newDiscount,
       finalAmount: Math.max(0, newFinal),
       updatedAt: sql3`now()`
-    }).where(eq12(bills.id, billId)).returning();
+    }).where(eq11(bills.id, billId)).returning();
     res.json({ success: true, bill: updated[0], message: `Discount of \u20B9${discountAmount} applied` });
   } catch (error) {
     console.error("Error adding discount:", error);
     res.status(500).json({ message: "Failed to add discount" });
   }
 });
-router11.post("/generate", async (req, res) => {
+router10.post("/generate", async (req, res) => {
   try {
     const { userId, month, year } = req.body;
     if (!userId || !month || !year) {
@@ -3299,29 +3542,29 @@ router11.post("/generate", async (req, res) => {
     }
     const existingBill = await db.select().from(bills).where(
       and8(
-        eq12(bills.userId, userId),
-        eq12(bills.month, month),
-        eq12(bills.year, year)
+        eq11(bills.userId, userId),
+        eq11(bills.month, month),
+        eq11(bills.year, year)
       )
     );
     if (existingBill.length > 0) {
       return res.status(400).json({ message: "Bill already exists for this month" });
     }
-    const userSubs = await db.select().from(milkSubscriptions).where(eq12(milkSubscriptions.userId, userId));
+    const userSubs = await db.select().from(milkSubscriptions).where(eq11(milkSubscriptions.userId, userId));
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     const monthOrders = await db.select().from(orders).where(
       and8(
-        eq12(orders.userId, userId),
-        gte3(orders.createdAt, startDate),
-        lte3(orders.createdAt, endDate)
+        eq11(orders.userId, userId),
+        gte4(orders.createdAt, startDate),
+        lte4(orders.createdAt, endDate)
       )
     );
     let subscriptionTotal = 0;
     const billItems = [];
     for (const sub of userSubs) {
       const product = await db.query.products.findFirst({
-        where: eq12(products.id, sub.productId)
+        where: eq11(products.id, sub.productId)
       });
       if (product && sub.status === "ACTIVE") {
         const daysInMonth = new Date(year, month, 0).getDate();
@@ -3377,70 +3620,17 @@ router11.post("/generate", async (req, res) => {
     res.status(500).json({ message: "Failed to generate bill" });
   }
 });
-var admin_billing_routes_default = router11;
+var admin_billing_routes_default = router10;
 
 // server/routes/rbac.routes.ts
-import { Router as Router12 } from "express";
-
-// server/middleware/auth.ts
-function checkRole(allowedRoles) {
-  return async (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized - Please log in" });
-    }
-    try {
-      const freshUser = await storage.getUser(req.user.id);
-      const userRole = freshUser?.role || req.user.role;
-      if (!allowedRoles.includes(userRole)) {
-        return res.status(403).json({
-          message: `Forbidden - This endpoint requires one of these roles: ${allowedRoles.join(", ")}`,
-          yourRole: userRole
-        });
-      }
-      req.user.role = userRole;
-      next();
-    } catch (error) {
-      console.error("Error checking user role:", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  };
-}
-async function requireAdminAccess(req, res, next) {
-  if (req.session?.isAdminLoggedIn) {
-    return next();
-  }
-  if (!req.user) {
-    return res.status(401).json({ message: "Unauthorized - Please log in" });
-  }
-  try {
-    const freshUser = await storage.getUser(req.user.id);
-    const userRole = freshUser?.role || req.user.role;
-    if (userRole !== "admin") {
-      return res.status(403).json({
-        message: "Forbidden - Admin access required",
-        yourRole: userRole
-      });
-    }
-    req.user.role = userRole;
-    next();
-  } catch (error) {
-    console.error("Error checking user role:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}
-var requireCustomer = checkRole(["customer"]);
-var requireVendor = checkRole(["vendor"]);
-var requireDelivery = checkRole(["delivery"]);
-var requireAdmin = checkRole(["admin"]);
-var requireCustomerOrAdmin = checkRole(["customer", "admin"]);
-var requireVendorOrAdmin = checkRole(["vendor", "admin"]);
-
-// server/routes/rbac.routes.ts
+import { Router as Router11 } from "express";
 init_schema();
 init_db();
-import { eq as eq13 } from "drizzle-orm";
-var router12 = Router12();
-router12.post("/auth/verify-phone", async (req, res) => {
+import { eq as eq12 } from "drizzle-orm";
+import path from "path";
+import fs from "fs";
+var router11 = Router11();
+router11.post("/auth/verify-phone", async (req, res) => {
   try {
     const { phone, otp } = req.body;
     if (!phone || !otp) {
@@ -3474,7 +3664,7 @@ router12.post("/auth/verify-phone", async (req, res) => {
     res.status(500).json({ message: "Verification failed" });
   }
 });
-router12.post("/auth/register", async (req, res) => {
+router11.post("/auth/register", async (req, res) => {
   try {
     const { phone, otp } = req.body;
     if (!phone || !otp) {
@@ -3505,7 +3695,7 @@ router12.post("/auth/register", async (req, res) => {
     res.status(500).json({ message: "Registration failed" });
   }
 });
-router12.get("/auth/user", async (req, res) => {
+router11.get("/auth/user", async (req, res) => {
   try {
     const userId = req.session?.userId || req.user?.id || req.user?.claims?.sub;
     if (!userId) {
@@ -3536,16 +3726,58 @@ router12.get("/auth/user", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch user" });
   }
 });
-router12.get("/products", async (req, res) => {
+router11.put("/user/profile", async (req, res) => {
   try {
-    const products4 = await storage.getProducts();
-    res.json(products4);
+    const userId = req.session?.userId || req.user?.id || req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const { firstName, lastName, email, phone, address, gender, dob } = req.body;
+    const updatedUser = await storage.updateUser(userId, {
+      firstName,
+      lastName,
+      email,
+      phone,
+      address,
+      gender,
+      dob: dob ? new Date(dob) : void 0
+    });
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: updatedUser.id,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        address: updatedUser.address
+      }
+    });
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    res.status(500).json({ message: "Failed to update profile" });
+  }
+});
+router11.get("/products", async (_req, res) => {
+  try {
+    const allProducts = await storage.getProducts();
+    res.json(allProducts);
   } catch (error) {
     console.error("Error fetching products:", error);
     res.status(500).json({ message: "Failed to fetch products" });
   }
 });
-router12.get("/categories", async (req, res) => {
+router11.get("/site-settings", async (_req, res) => {
+  try {
+    const settings = await storage.getSiteSettings();
+    res.json(settings || { brandName: "Divine Naturals" });
+  } catch (error) {
+    console.error("Error fetching site settings:", error);
+    res.status(500).json({ message: "Failed to fetch site settings" });
+  }
+});
+router11.get("/categories", async (req, res) => {
   try {
     const categories2 = await storage.getCategories();
     res.json(categories2);
@@ -3554,7 +3786,7 @@ router12.get("/categories", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch categories" });
   }
 });
-router12.put("/categories/:id", requireAdminAccess, async (req, res) => {
+router11.put("/categories/:id", requireAdminAccess, async (req, res) => {
   try {
     const categoryId = parseInt(req.params.id);
     const updates = req.body;
@@ -3568,7 +3800,7 @@ router12.put("/categories/:id", requireAdminAccess, async (req, res) => {
     res.status(500).json({ message: "Failed to update category" });
   }
 });
-router12.delete("/categories/:id", requireAdminAccess, async (req, res) => {
+router11.delete("/categories/:id", requireAdminAccess, async (req, res) => {
   try {
     const categoryId = parseInt(req.params.id);
     if (isNaN(categoryId)) {
@@ -3581,7 +3813,7 @@ router12.delete("/categories/:id", requireAdminAccess, async (req, res) => {
     res.status(500).json({ message: "Failed to delete category" });
   }
 });
-router12.post("/cart", requireCustomer, async (req, res) => {
+router11.post("/cart", requireCustomer, async (req, res) => {
   try {
     const userId = req.user.claims.sub;
     const { productId, quantity } = req.body;
@@ -3595,7 +3827,7 @@ router12.post("/cart", requireCustomer, async (req, res) => {
     res.status(500).json({ message: "Failed to add item to cart" });
   }
 });
-router12.get("/cart", requireCustomer, async (req, res) => {
+router11.get("/cart", requireCustomer, async (req, res) => {
   try {
     const userId = req.user.claims.sub;
     const cartItems2 = await storage.getCartItems(userId);
@@ -3605,7 +3837,7 @@ router12.get("/cart", requireCustomer, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch cart" });
   }
 });
-router12.post("/orders", requireCustomer, async (req, res) => {
+router11.post("/orders", requireCustomer, async (req, res) => {
   try {
     const userId = req.user.claims.sub;
     const { deliveryAddress, deliveryDate } = req.body;
@@ -3635,21 +3867,6 @@ router12.post("/orders", requireCustomer, async (req, res) => {
         price: item.price,
         totalPrice: (parseFloat(item.price) * item.quantity).toFixed(2)
       });
-      const product = await db.select().from(products).where(eq13(products.id, item.productId));
-      if (product.length > 0) {
-        const newStock = Math.max(0, (product[0].stock || 0) - item.quantity);
-        await storage.updateProduct(item.productId, { stock: newStock });
-        await storage.recordStockMovement({
-          productId: item.productId,
-          type: "OUT",
-          reason: "ORDER_PLACED",
-          quantity: item.quantity,
-          previousStock: product[0].stock || 0,
-          newStock,
-          adminId: null,
-          notes: `Order #${order.id} placed`
-        });
-      }
     }
     await storage.clearCart(userId);
     res.json({ success: true, order });
@@ -3658,7 +3875,7 @@ router12.post("/orders", requireCustomer, async (req, res) => {
     res.status(500).json({ message: "Failed to create order" });
   }
 });
-router12.get("/milk-subscription", requireCustomer, async (req, res) => {
+router11.get("/milk-subscription", requireCustomer, async (req, res) => {
   try {
     const userId = req.user.claims.sub;
     const subscription = await storage.getMilkSubscriptionByUser(userId);
@@ -3668,7 +3885,7 @@ router12.get("/milk-subscription", requireCustomer, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch subscription" });
   }
 });
-router12.post("/milk-subscription", requireCustomer, async (req, res) => {
+router11.post("/milk-subscription", requireCustomer, async (req, res) => {
   try {
     const userId = req.user.claims.sub;
     const subscriptionData = insertMilkSubscriptionSchema.parse({ ...req.body, userId });
@@ -3679,7 +3896,7 @@ router12.post("/milk-subscription", requireCustomer, async (req, res) => {
     res.status(500).json({ message: "Failed to create subscription" });
   }
 });
-router12.patch("/milk-subscription/:id/pause", requireCustomer, async (req, res) => {
+router11.patch("/milk-subscription/:id/pause", requireCustomer, async (req, res) => {
   try {
     const subscriptionId = parseInt(req.params.id);
     const userId = req.user.claims.sub;
@@ -3697,7 +3914,7 @@ router12.patch("/milk-subscription/:id/pause", requireCustomer, async (req, res)
     res.status(500).json({ message: "Failed to pause subscription" });
   }
 });
-router12.patch("/milk-subscription/:id/resume", requireCustomer, async (req, res) => {
+router11.patch("/milk-subscription/:id/resume", requireCustomer, async (req, res) => {
   try {
     const subscriptionId = parseInt(req.params.id);
     const userId = req.user.claims.sub;
@@ -3715,7 +3932,7 @@ router12.patch("/milk-subscription/:id/resume", requireCustomer, async (req, res
     res.status(500).json({ message: "Failed to resume subscription" });
   }
 });
-router12.put("/personal-details", requireCustomer, async (req, res) => {
+router11.put("/personal-details", requireCustomer, async (req, res) => {
   try {
     const userId = req.user.claims.sub;
     const { firstName, lastName, email, gender, dob } = req.body;
@@ -3745,7 +3962,7 @@ router12.put("/personal-details", requireCustomer, async (req, res) => {
     res.status(500).json({ message: "Failed to save personal details" });
   }
 });
-router12.get("/vendors/dashboard", requireVendor, async (req, res) => {
+router11.get(["/vendors/dashboard", "/vendor/dashboard", "/vendor/me/dashboard"], requireVendor, async (req, res) => {
   try {
     const userId = req.user.claims.sub;
     const vendor = await storage.getVendorByUser(userId);
@@ -3768,7 +3985,7 @@ router12.get("/vendors/dashboard", requireVendor, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch dashboard data" });
   }
 });
-router12.post("/vendors/inward", requireVendor, async (req, res) => {
+router11.post(["/vendors/inward", "/vendor/inward"], requireVendor, async (req, res) => {
   try {
     const userId = req.user.claims.sub;
     const { litersArrived, litersDelivered, litersPending, driverInfo } = req.body;
@@ -3789,13 +4006,16 @@ router12.post("/vendors/inward", requireVendor, async (req, res) => {
       sentToAdmin: true,
       status: "PENDING"
     });
+    if (litersDelivered > 0) {
+      await storage.updateVendorRequirement(vendor.id, litersDelivered);
+    }
     res.json({ success: true, inwardEntry });
   } catch (error) {
     console.error("Error logging inward entry:", error);
     res.status(500).json({ message: "Failed to log inward entry" });
   }
 });
-router12.post("/vendors/driver", requireVendor, async (req, res) => {
+router11.post("/vendors/driver", requireVendor, async (req, res) => {
   try {
     const userId = req.user.claims.sub;
     const { name, age, phone, aadharUrl, panUrl } = req.body;
@@ -3820,7 +4040,7 @@ router12.post("/vendors/driver", requireVendor, async (req, res) => {
     res.status(500).json({ message: "Failed to add driver" });
   }
 });
-router12.get("/vendors/drivers", requireVendor, async (req, res) => {
+router11.get("/vendors/drivers", requireVendor, async (req, res) => {
   try {
     const userId = req.user.claims.sub;
     const vendor = await storage.getVendorByUser(userId);
@@ -3834,7 +4054,7 @@ router12.get("/vendors/drivers", requireVendor, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch drivers" });
   }
 });
-router12.get("/delivery/assignments", requireDelivery, async (req, res) => {
+router11.get("/delivery/assignments", requireDelivery, async (req, res) => {
   try {
     const userId = req.user.claims.sub;
     const deliveryPartner = await storage.getDeliveryPartnerByUser(userId);
@@ -3848,7 +4068,7 @@ router12.get("/delivery/assignments", requireDelivery, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch assignments" });
   }
 });
-router12.put("/delivery/status/:id", requireDelivery, async (req, res) => {
+router11.put("/delivery/status/:id", requireDelivery, async (req, res) => {
   try {
     const orderId = parseInt(req.params.id);
     const { status } = req.body;
@@ -3878,7 +4098,7 @@ router12.put("/delivery/status/:id", requireDelivery, async (req, res) => {
     res.status(500).json({ message: "Failed to update order status" });
   }
 });
-router12.get("/admin/vendors", requireAdmin, async (req, res) => {
+router11.get("/admin/vendors", requireAdmin, async (req, res) => {
   try {
     const vendors2 = await storage.getVendors();
     const vendorList = vendors2.map((vendor) => ({
@@ -3900,7 +4120,7 @@ router12.get("/admin/vendors", requireAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch vendors" });
   }
 });
-router12.post("/admin/vendors/approve/:id", requireAdmin, async (req, res) => {
+router11.post("/admin/vendors/approve/:id", requireAdmin, async (req, res) => {
   try {
     const vendorId = parseInt(req.params.id);
     if (isNaN(vendorId)) {
@@ -3913,7 +4133,7 @@ router12.post("/admin/vendors/approve/:id", requireAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to approve vendor" });
   }
 });
-router12.post("/admin/update-password", async (req, res) => {
+router11.post("/admin/update-password", async (req, res) => {
   try {
     const { email, newPassword } = req.body;
     if (!email || !newPassword) {
@@ -3923,7 +4143,7 @@ router12.post("/admin/update-password", async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
     const user = await db.query.users.findFirst({
-      where: eq13(users.email, email)
+      where: eq12(users.email, email)
     });
     if (!user) {
       return res.status(404).json({ message: "Admin user not found" });
@@ -3935,7 +4155,7 @@ router12.post("/admin/update-password", async (req, res) => {
     res.status(500).json({ message: "Failed to update password" });
   }
 });
-router12.post("/admin/categories", requireAdminAccess, async (req, res) => {
+router11.post("/admin/categories", requireAdminAccess, async (req, res) => {
   try {
     const { name, description, icon } = req.body;
     if (!name) {
@@ -3953,7 +4173,7 @@ router12.post("/admin/categories", requireAdminAccess, async (req, res) => {
     res.status(500).json({ message: "Failed to add category" });
   }
 });
-router12.put("/admin/categories/:id", requireAdminAccess, async (req, res) => {
+router11.put("/admin/categories/:id", requireAdminAccess, async (req, res) => {
   try {
     const categoryId = parseInt(req.params.id);
     const updates = req.body;
@@ -3967,7 +4187,7 @@ router12.put("/admin/categories/:id", requireAdminAccess, async (req, res) => {
     res.status(500).json({ message: "Failed to update category" });
   }
 });
-router12.delete("/admin/categories/:id", requireAdminAccess, async (req, res) => {
+router11.delete("/admin/categories/:id", requireAdminAccess, async (req, res) => {
   try {
     const categoryId = parseInt(req.params.id);
     if (isNaN(categoryId)) {
@@ -3980,7 +4200,76 @@ router12.delete("/admin/categories/:id", requireAdminAccess, async (req, res) =>
     res.status(500).json({ message: "Failed to delete category" });
   }
 });
-router12.post("/admin/products", requireAdminAccess, async (req, res) => {
+router11.post("/admin/generate-ai-image", requireAdminAccess, async (req, res) => {
+  try {
+    const { prompt, productName } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ message: "Prompt is required for generation" });
+    }
+    console.log(`AI Image generation requested for: ${productName}`);
+    console.log(`Prompt: ${prompt}`);
+    const fileName = `ai_${Date.now()}_${productName.toLowerCase().replace(/\s+/g, "_")}.png`;
+    const publicPath = `/images/products/${fileName}`;
+    res.json({
+      success: true,
+      url: "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?auto=format&fit=crop&q=80&w=800",
+      // High-quality milk placeholder
+      message: "AI image generated successfully (Demo Mode)"
+    });
+  } catch (error) {
+    console.error("Error generating AI image:", error);
+    res.status(500).json({ message: "AI generation failed" });
+  }
+});
+router11.post("/admin/upload-product-image", requireAdminAccess, async (req, res) => {
+  try {
+    console.log("Upload request received");
+    if (!req.files || !req.files.image) {
+      console.log("No files in request:", req.files);
+      return res.status(400).json({ message: "No image file provided" });
+    }
+    const image = req.files.image;
+    console.log("Received image:", image.name, "Size:", image.size);
+    const sanitizedName = image.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const fileName = `${Date.now()}_${sanitizedName}`;
+    const uploadPath = path.join(process.cwd(), "public", "products", fileName);
+    console.log("Uploading to:", uploadPath);
+    const dir = path.dirname(uploadPath);
+    if (!fs.existsSync(dir)) {
+      console.log("Creating directory:", dir);
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    await image.mv(uploadPath);
+    console.log("File moved successfully");
+    const imageUrl = `/products/${fileName}`;
+    res.json({ url: imageUrl });
+  } catch (error) {
+    console.error("Error uploading product image:", error);
+    res.status(500).json({ message: "Failed to upload image" });
+  }
+});
+router11.post("/admin/upload-banner-image", requireAdminAccess, async (req, res) => {
+  try {
+    if (!req.files || !req.files.image) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
+    const image = req.files.image;
+    const sanitizedName = image.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const fileName = `${Date.now()}_banner_${sanitizedName}`;
+    const uploadPath = path.join(process.cwd(), "public", "banners", fileName);
+    const dir = path.dirname(uploadPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    await image.mv(uploadPath);
+    const imageUrl = `/banners/${fileName}`;
+    res.json({ url: imageUrl });
+  } catch (error) {
+    console.error("Error uploading banner image:", error);
+    res.status(500).json({ message: "Failed to upload image" });
+  }
+});
+router11.post("/admin/products", requireAdminAccess, async (req, res) => {
   try {
     const { name, description, category, type, price, unit, stock, imageUrl } = req.body;
     if (!name || !category || !type || !price || !unit) {
@@ -4003,7 +4292,7 @@ router12.post("/admin/products", requireAdminAccess, async (req, res) => {
     res.status(500).json({ message: "Failed to add product" });
   }
 });
-router12.put("/admin/products/:id", requireAdminAccess, async (req, res) => {
+router11.put("/admin/products/:id", requireAdminAccess, async (req, res) => {
   try {
     const productId = parseInt(req.params.id);
     const updates = req.body;
@@ -4033,7 +4322,7 @@ router12.put("/admin/products/:id", requireAdminAccess, async (req, res) => {
     res.status(500).json({ message: "Failed to update product" });
   }
 });
-router12.delete("/admin/products/:id", requireAdminAccess, async (req, res) => {
+router11.delete("/admin/products/:id", requireAdminAccess, async (req, res) => {
   try {
     const productId = parseInt(req.params.id);
     if (isNaN(productId)) {
@@ -4046,7 +4335,7 @@ router12.delete("/admin/products/:id", requireAdminAccess, async (req, res) => {
     res.status(500).json({ message: "Failed to deactivate product" });
   }
 });
-router12.get("/admin/orders", requireAdmin, async (req, res) => {
+router11.get("/admin/orders", requireAdmin, async (req, res) => {
   try {
     const orders2 = await storage.getAllOrders();
     res.json(orders2);
@@ -4055,7 +4344,7 @@ router12.get("/admin/orders", requireAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch orders" });
   }
 });
-router12.put("/admin/orders/:id/assign-delivery", requireAdmin, async (req, res) => {
+router11.put("/admin/orders/:id/assign-delivery", requireAdmin, async (req, res) => {
   try {
     const orderId = parseInt(req.params.id);
     const { deliveryPartnerId } = req.body;
@@ -4069,7 +4358,7 @@ router12.put("/admin/orders/:id/assign-delivery", requireAdmin, async (req, res)
     res.status(500).json({ message: "Failed to assign delivery partner" });
   }
 });
-router12.put("/admin/orders/:id/payment", requireAdmin, async (req, res) => {
+router11.put("/admin/orders/:id/payment", requireAdmin, async (req, res) => {
   try {
     const orderId = parseInt(req.params.id);
     const { paymentStatus, paymentMethod, paymentDate } = req.body;
@@ -4087,7 +4376,7 @@ router12.put("/admin/orders/:id/payment", requireAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to update payment" });
   }
 });
-router12.get("/admin/customers", requireAdmin, async (req, res) => {
+router11.get("/admin/customers", requireAdmin, async (req, res) => {
   try {
     const customers = await storage.getAllCustomers();
     res.json(customers);
@@ -4096,7 +4385,7 @@ router12.get("/admin/customers", requireAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch customers" });
   }
 });
-router12.get("/admin/subscriptions", requireAdmin, async (req, res) => {
+router11.get("/admin/subscriptions", requireAdmin, async (req, res) => {
   try {
     const subscriptions = await storage.getAllSubscriptions();
     res.json(subscriptions);
@@ -4105,7 +4394,7 @@ router12.get("/admin/subscriptions", requireAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch subscriptions" });
   }
 });
-router12.get("/admin/vendors", requireAdmin, async (req, res) => {
+router11.get("/admin/vendors", requireAdmin, async (req, res) => {
   try {
     const vendors2 = await storage.getVendors();
     res.json(vendors2);
@@ -4114,7 +4403,19 @@ router12.get("/admin/vendors", requireAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch vendors" });
   }
 });
-router12.get("/admin/stats", requireAdmin, async (req, res) => {
+router11.post("/admin/cms/privacy-policy", requireAdminAccess, async (req, res) => {
+  const updated = await storage.updatePrivacyPolicySettings(req.body);
+  res.json(updated);
+});
+router11.get("/admin/site-settings", requireAdminAccess, async (_req, res) => {
+  const settings = await storage.getSiteSettings();
+  res.json(settings || { brandName: "Divine Naturals" });
+});
+router11.post("/admin/site-settings", requireAdminAccess, async (req, res) => {
+  const updated = await storage.updateSiteSettings(req.body);
+  res.json(updated);
+});
+router11.get("/admin/stats", requireAdmin, async (req, res) => {
   try {
     const stats = await storage.getAdminStats();
     res.json(stats);
@@ -4123,7 +4424,7 @@ router12.get("/admin/stats", requireAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch stats" });
   }
 });
-router12.put("/admin/orders/:id", requireAdmin, async (req, res) => {
+router11.put("/admin/orders/:id", requireAdmin, async (req, res) => {
   try {
     const orderId = parseInt(req.params.id);
     const { status } = req.body;
@@ -4137,7 +4438,7 @@ router12.put("/admin/orders/:id", requireAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to update order status" });
   }
 });
-router12.get("/admin/stock-movements", requireAdmin, async (req, res) => {
+router11.get("/admin/stock-movements", requireAdmin, async (req, res) => {
   try {
     const movements = await storage.getAllStockMovements();
     res.json(movements);
@@ -4146,7 +4447,7 @@ router12.get("/admin/stock-movements", requireAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch stock movements" });
   }
 });
-router12.get("/admin/stock-movements/:productId", requireAdmin, async (req, res) => {
+router11.get("/admin/stock-movements/:productId", requireAdmin, async (req, res) => {
   try {
     const productId = parseInt(req.params.productId);
     if (isNaN(productId)) {
@@ -4159,17 +4460,17 @@ router12.get("/admin/stock-movements/:productId", requireAdmin, async (req, res)
     res.status(500).json({ message: "Failed to fetch stock movements" });
   }
 });
-router12.post("/storage/upload", requireAdmin, async (req, res) => {
+router11.post("/storage/upload", requireAdmin, async (req, res) => {
   try {
-    const { file, path: path4, data, dataUrl } = req.body;
+    const { file, path: path5, data, dataUrl } = req.body;
     if (dataUrl) {
       const timestamp2 = Date.now();
-      const uniquePath = `${path4}-${timestamp2}`.replace(/\s+/g, "-");
+      const uniquePath = `${path5}-${timestamp2}`.replace(/\s+/g, "-");
       return res.json({ url: dataUrl });
     }
     if (data) {
       const timestamp2 = Date.now();
-      const uniquePath = `${path4}-${timestamp2}`.replace(/\s+/g, "-");
+      const uniquePath = `${path5}-${timestamp2}`.replace(/\s+/g, "-");
       const dataURLPrefix = "data:image/jpeg;base64,";
       return res.json({ url: `${dataURLPrefix}${data}` });
     }
@@ -4179,50 +4480,27 @@ router12.post("/storage/upload", requireAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to upload file" });
   }
 });
-var rbac_routes_default = router12;
+var rbac_routes_default = router11;
 
 // server/routes/banners.routes.ts
 init_db();
 init_schema();
-import { Router as Router13 } from "express";
-import { eq as eq14, asc as asc2, and as and9, lte as lte4, gte as gte4, isNull, or } from "drizzle-orm";
-var router13 = Router13();
-var isAdmin = async (req, res, next) => {
-  try {
-    if (req.session?.isAdminLoggedIn === true) {
-      return next();
-    }
-    const userId = req.session?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    if (req.session?.userRole === "admin") {
-      return next();
-    }
-    const [user] = await db.select().from(users2).where(eq14(users2.id, userId));
-    if (user?.role === "admin") {
-      req.session.userRole = "admin";
-      return next();
-    }
-    return res.status(403).json({ message: "Admin access required" });
-  } catch (error) {
-    console.error("Error checking admin status:", error);
-    return res.status(500).json({ message: "Error checking permissions" });
-  }
-};
-router13.get("/public", async (req, res) => {
+import { Router as Router12 } from "express";
+import { eq as eq13, asc as asc2, and as and9, lte as lte5, gte as gte5, isNull as isNull2, or as or2 } from "drizzle-orm";
+var router12 = Router12();
+router12.get("/public", async (req, res) => {
   try {
     const now = /* @__PURE__ */ new Date();
     const activeBanners = await db.select().from(banners).where(
       and9(
-        eq14(banners.isActive, true),
-        or(
-          isNull(banners.startDate),
-          lte4(banners.startDate, now)
+        eq13(banners.isActive, true),
+        or2(
+          isNull2(banners.startDate),
+          lte5(banners.startDate, now)
         ),
-        or(
-          isNull(banners.endDate),
-          gte4(banners.endDate, now)
+        or2(
+          isNull2(banners.endDate),
+          gte5(banners.endDate, now)
         )
       )
     ).orderBy(asc2(banners.displayOrder));
@@ -4232,7 +4510,7 @@ router13.get("/public", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch banners" });
   }
 });
-router13.get("/", isAdmin, async (req, res) => {
+router12.get("/", requireAdminAccess, async (req, res) => {
   try {
     const allBanners = await db.select().from(banners).orderBy(asc2(banners.displayOrder));
     res.json(allBanners);
@@ -4241,9 +4519,9 @@ router13.get("/", isAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch banners" });
   }
 });
-router13.post("/", isAdmin, async (req, res) => {
+router12.post("/", requireAdminAccess, async (req, res) => {
   try {
-    const { title, subtitle, imageUrl, imageUrlTablet, imageUrlMobile, ctaText, ctaLink, badgeText, displayOrder, isActive, startDate, endDate } = req.body;
+    const { title, subtitle, imageUrl, imageUrlTablet, imageUrlMobile, ctaText, ctaLink, badgeText, displayOrder, isActive, showOverlay, startDate, endDate } = req.body;
     const [newBanner] = await db.insert(banners).values({
       title,
       subtitle,
@@ -4255,6 +4533,7 @@ router13.post("/", isAdmin, async (req, res) => {
       badgeText,
       displayOrder: displayOrder || 0,
       isActive: isActive !== false,
+      showOverlay: showOverlay !== false,
       startDate: startDate ? new Date(startDate) : null,
       endDate: endDate ? new Date(endDate) : null
     }).returning();
@@ -4264,10 +4543,10 @@ router13.post("/", isAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to create banner" });
   }
 });
-router13.put("/:id", isAdmin, async (req, res) => {
+router12.put("/:id", requireAdminAccess, async (req, res) => {
   try {
     const bannerId = parseInt(req.params.id);
-    const { title, subtitle, imageUrl, imageUrlTablet, imageUrlMobile, ctaText, ctaLink, badgeText, displayOrder, isActive, startDate, endDate } = req.body;
+    const { title, subtitle, imageUrl, imageUrlTablet, imageUrlMobile, ctaText, ctaLink, badgeText, displayOrder, isActive, showOverlay, startDate, endDate } = req.body;
     const [updatedBanner] = await db.update(banners).set({
       title,
       subtitle,
@@ -4279,10 +4558,11 @@ router13.put("/:id", isAdmin, async (req, res) => {
       badgeText,
       displayOrder,
       isActive,
+      showOverlay,
       startDate: startDate ? new Date(startDate) : null,
       endDate: endDate ? new Date(endDate) : null,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq14(banners.id, bannerId)).returning();
+    }).where(eq13(banners.id, bannerId)).returning();
     if (!updatedBanner) {
       return res.status(404).json({ message: "Banner not found" });
     }
@@ -4292,10 +4572,10 @@ router13.put("/:id", isAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to update banner" });
   }
 });
-router13.delete("/:id", isAdmin, async (req, res) => {
+router12.delete("/:id", requireAdminAccess, async (req, res) => {
   try {
     const bannerId = parseInt(req.params.id);
-    const [deletedBanner] = await db.delete(banners).where(eq14(banners.id, bannerId)).returning();
+    const [deletedBanner] = await db.delete(banners).where(eq13(banners.id, bannerId)).returning();
     if (!deletedBanner) {
       return res.status(404).json({ message: "Banner not found" });
     }
@@ -4305,16 +4585,16 @@ router13.delete("/:id", isAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to delete banner" });
   }
 });
-router13.get("/sections/public", async (req, res) => {
+router12.get("/sections/public", async (req, res) => {
   try {
-    const activeSections = await db.select().from(homepageSections).where(eq14(homepageSections.isActive, true)).orderBy(asc2(homepageSections.displayOrder));
+    const activeSections = await db.select().from(homepageSections).where(eq13(homepageSections.isActive, true)).orderBy(asc2(homepageSections.displayOrder));
     res.json(activeSections);
   } catch (error) {
     console.error("Error fetching homepage sections:", error);
     res.status(500).json({ message: "Failed to fetch sections" });
   }
 });
-router13.get("/sections", isAdmin, async (req, res) => {
+router12.get("/sections", requireAdminAccess, async (req, res) => {
   try {
     const allSections = await db.select().from(homepageSections).orderBy(asc2(homepageSections.displayOrder));
     res.json(allSections);
@@ -4323,7 +4603,7 @@ router13.get("/sections", isAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch sections" });
   }
 });
-router13.post("/sections", isAdmin, async (req, res) => {
+router12.post("/sections", requireAdminAccess, async (req, res) => {
   try {
     const { sectionType, title, subtitle, content, displayOrder, isActive } = req.body;
     if (!sectionType) {
@@ -4343,48 +4623,24 @@ router13.post("/sections", isAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to create section" });
   }
 });
-var banners_routes_default = router13;
+var banners_routes_default = router12;
 
 // server/routes/homepage.routes.ts
 init_db();
 init_schema();
-import { Router as Router14 } from "express";
-import { eq as eq15, asc as asc3, desc as desc3, and as and10, lte as lte5, gte as gte5, isNull as isNull2, or as or2 } from "drizzle-orm";
-var router14 = Router14();
-var isAdmin2 = async (req, res, next) => {
+import { Router as Router13 } from "express";
+import { eq as eq14, asc as asc3, desc as desc3, and as and10, lte as lte6, gte as gte6, isNull as isNull3, or as or3 } from "drizzle-orm";
+var router13 = Router13();
+router13.get("/ethos/public", async (req, res) => {
   try {
-    if (req.session?.isAdminLoggedIn === true) {
-      return next();
-    }
-    const userId = req.session?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    if (req.session?.userRole === "admin") {
-      return next();
-    }
-    const { users: users5 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const [user] = await db.select().from(users5).where(eq15(users5.id, userId));
-    if (user?.role === "admin") {
-      req.session.userRole = "admin";
-      return next();
-    }
-    return res.status(403).json({ message: "Admin access required" });
-  } catch (error) {
-    console.error("Error checking admin status:", error);
-    return res.status(500).json({ message: "Error checking permissions" });
-  }
-};
-router14.get("/ethos/public", async (req, res) => {
-  try {
-    const cards = await db.select().from(ethosCards).where(eq15(ethosCards.isActive, true)).orderBy(asc3(ethosCards.displayOrder));
+    const cards = await db.select().from(ethosCards).where(eq14(ethosCards.isActive, true)).orderBy(asc3(ethosCards.displayOrder));
     res.json(cards);
   } catch (error) {
     console.error("Error fetching ethos cards:", error);
     res.status(500).json({ message: "Failed to fetch ethos cards" });
   }
 });
-router14.get("/ethos", isAdmin2, async (req, res) => {
+router13.get("/ethos", requireAdminAccess, async (req, res) => {
   try {
     const cards = await db.select().from(ethosCards).orderBy(asc3(ethosCards.displayOrder));
     res.json(cards);
@@ -4393,7 +4649,7 @@ router14.get("/ethos", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch ethos cards" });
   }
 });
-router14.post("/ethos", isAdmin2, async (req, res) => {
+router13.post("/ethos", requireAdminAccess, async (req, res) => {
   try {
     const { title, description, icon, displayOrder, isActive } = req.body;
     const [card] = await db.insert(ethosCards).values({
@@ -4409,11 +4665,11 @@ router14.post("/ethos", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to create ethos card" });
   }
 });
-router14.put("/ethos/:id", isAdmin2, async (req, res) => {
+router13.put("/ethos/:id", requireAdminAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { title, description, icon, displayOrder, isActive } = req.body;
-    const [card] = await db.update(ethosCards).set({ title, description, icon, displayOrder, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq15(ethosCards.id, id)).returning();
+    const [card] = await db.update(ethosCards).set({ title, description, icon, displayOrder, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq14(ethosCards.id, id)).returning();
     if (!card) return res.status(404).json({ message: "Card not found" });
     res.json(card);
   } catch (error) {
@@ -4421,10 +4677,10 @@ router14.put("/ethos/:id", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to update ethos card" });
   }
 });
-router14.delete("/ethos/:id", isAdmin2, async (req, res) => {
+router13.delete("/ethos/:id", requireAdminAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const [card] = await db.delete(ethosCards).where(eq15(ethosCards.id, id)).returning();
+    const [card] = await db.delete(ethosCards).where(eq14(ethosCards.id, id)).returning();
     if (!card) return res.status(404).json({ message: "Card not found" });
     res.json({ message: "Card deleted successfully" });
   } catch (error) {
@@ -4432,16 +4688,16 @@ router14.delete("/ethos/:id", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to delete ethos card" });
   }
 });
-router14.get("/stats/public", async (req, res) => {
+router13.get("/stats/public", async (req, res) => {
   try {
-    const counters = await db.select().from(statsCounters).where(eq15(statsCounters.isActive, true)).orderBy(asc3(statsCounters.displayOrder));
+    const counters = await db.select().from(statsCounters).where(eq14(statsCounters.isActive, true)).orderBy(asc3(statsCounters.displayOrder));
     res.json(counters);
   } catch (error) {
     console.error("Error fetching stats counters:", error);
     res.status(500).json({ message: "Failed to fetch stats counters" });
   }
 });
-router14.get("/stats", isAdmin2, async (req, res) => {
+router13.get("/stats", requireAdminAccess, async (req, res) => {
   try {
     const counters = await db.select().from(statsCounters).orderBy(asc3(statsCounters.displayOrder));
     res.json(counters);
@@ -4450,7 +4706,7 @@ router14.get("/stats", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch stats counters" });
   }
 });
-router14.post("/stats", isAdmin2, async (req, res) => {
+router13.post("/stats", requireAdminAccess, async (req, res) => {
   try {
     const { label, value, suffix, icon, displayOrder, isActive } = req.body;
     const [counter] = await db.insert(statsCounters).values({
@@ -4467,11 +4723,11 @@ router14.post("/stats", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to create stats counter" });
   }
 });
-router14.put("/stats/:id", isAdmin2, async (req, res) => {
+router13.put("/stats/:id", requireAdminAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { label, value, suffix, icon, displayOrder, isActive } = req.body;
-    const [counter] = await db.update(statsCounters).set({ label, value, suffix, icon, displayOrder, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq15(statsCounters.id, id)).returning();
+    const [counter] = await db.update(statsCounters).set({ label, value, suffix, icon, displayOrder, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq14(statsCounters.id, id)).returning();
     if (!counter) return res.status(404).json({ message: "Counter not found" });
     res.json(counter);
   } catch (error) {
@@ -4479,10 +4735,10 @@ router14.put("/stats/:id", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to update stats counter" });
   }
 });
-router14.delete("/stats/:id", isAdmin2, async (req, res) => {
+router13.delete("/stats/:id", requireAdminAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const [counter] = await db.delete(statsCounters).where(eq15(statsCounters.id, id)).returning();
+    const [counter] = await db.delete(statsCounters).where(eq14(statsCounters.id, id)).returning();
     if (!counter) return res.status(404).json({ message: "Counter not found" });
     res.json({ message: "Counter deleted successfully" });
   } catch (error) {
@@ -4490,16 +4746,16 @@ router14.delete("/stats/:id", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to delete stats counter" });
   }
 });
-router14.get("/faqs/public", async (req, res) => {
+router13.get("/faqs/public", async (req, res) => {
   try {
-    const faqList = await db.select().from(faqs2).where(eq15(faqs2.isActive, true)).orderBy(asc3(faqs2.displayOrder));
+    const faqList = await db.select().from(faqs2).where(eq14(faqs2.isActive, true)).orderBy(asc3(faqs2.displayOrder));
     res.json(faqList);
   } catch (error) {
     console.error("Error fetching FAQs:", error);
     res.status(500).json({ message: "Failed to fetch FAQs" });
   }
 });
-router14.get("/faqs", isAdmin2, async (req, res) => {
+router13.get("/faqs", requireAdminAccess, async (req, res) => {
   try {
     const faqList = await db.select().from(faqs2).orderBy(asc3(faqs2.displayOrder));
     res.json(faqList);
@@ -4508,7 +4764,7 @@ router14.get("/faqs", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch FAQs" });
   }
 });
-router14.post("/faqs", isAdmin2, async (req, res) => {
+router13.post("/faqs", requireAdminAccess, async (req, res) => {
   try {
     const { question, answer, category, displayOrder, isActive } = req.body;
     const [faq] = await db.insert(faqs2).values({
@@ -4524,11 +4780,11 @@ router14.post("/faqs", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to create FAQ" });
   }
 });
-router14.put("/faqs/:id", isAdmin2, async (req, res) => {
+router13.put("/faqs/:id", requireAdminAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { question, answer, category, displayOrder, isActive } = req.body;
-    const [faq] = await db.update(faqs2).set({ question, answer, category, displayOrder, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq15(faqs2.id, id)).returning();
+    const [faq] = await db.update(faqs2).set({ question, answer, category, displayOrder, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq14(faqs2.id, id)).returning();
     if (!faq) return res.status(404).json({ message: "FAQ not found" });
     res.json(faq);
   } catch (error) {
@@ -4536,10 +4792,10 @@ router14.put("/faqs/:id", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to update FAQ" });
   }
 });
-router14.delete("/faqs/:id", isAdmin2, async (req, res) => {
+router13.delete("/faqs/:id", requireAdminAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const [faq] = await db.delete(faqs2).where(eq15(faqs2.id, id)).returning();
+    const [faq] = await db.delete(faqs2).where(eq14(faqs2.id, id)).returning();
     if (!faq) return res.status(404).json({ message: "FAQ not found" });
     res.json({ message: "FAQ deleted successfully" });
   } catch (error) {
@@ -4547,7 +4803,7 @@ router14.delete("/faqs/:id", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to delete FAQ" });
   }
 });
-router14.get("/deals/public", async (req, res) => {
+router13.get("/deals/public", async (req, res) => {
   try {
     const now = /* @__PURE__ */ new Date();
     const deals = await db.select({
@@ -4558,12 +4814,12 @@ router14.get("/deals/public", async (req, res) => {
       badgeText: productDeals.badgeText,
       priority: productDeals.priority,
       product: products
-    }).from(productDeals).innerJoin(products, eq15(productDeals.productId, products.id)).where(
+    }).from(productDeals).innerJoin(products, eq14(productDeals.productId, products.id)).where(
       and10(
-        eq15(productDeals.isActive, true),
-        eq15(products.isActive, true),
-        or2(isNull2(productDeals.startsAt), lte5(productDeals.startsAt, now)),
-        or2(isNull2(productDeals.endsAt), gte5(productDeals.endsAt, now))
+        eq14(productDeals.isActive, true),
+        eq14(products.isActive, true),
+        or3(isNull3(productDeals.startsAt), lte6(productDeals.startsAt, now)),
+        or3(isNull3(productDeals.endsAt), gte6(productDeals.endsAt, now))
       )
     ).orderBy(asc3(productDeals.priority));
     res.json(deals);
@@ -4572,7 +4828,7 @@ router14.get("/deals/public", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch deals" });
   }
 });
-router14.get("/deals", isAdmin2, async (req, res) => {
+router13.get("/deals", requireAdminAccess, async (req, res) => {
   try {
     const deals = await db.select({
       id: productDeals.id,
@@ -4585,14 +4841,14 @@ router14.get("/deals", isAdmin2, async (req, res) => {
       endsAt: productDeals.endsAt,
       isActive: productDeals.isActive,
       product: products
-    }).from(productDeals).leftJoin(products, eq15(productDeals.productId, products.id)).orderBy(asc3(productDeals.priority));
+    }).from(productDeals).leftJoin(products, eq14(productDeals.productId, products.id)).orderBy(asc3(productDeals.priority));
     res.json(deals);
   } catch (error) {
     console.error("Error fetching deals:", error);
     res.status(500).json({ message: "Failed to fetch deals" });
   }
 });
-router14.post("/deals", isAdmin2, async (req, res) => {
+router13.post("/deals", requireAdminAccess, async (req, res) => {
   try {
     const { productId, dealType, dealValue, badgeText, priority, startsAt, endsAt, isActive } = req.body;
     const [deal] = await db.insert(productDeals).values({
@@ -4611,7 +4867,7 @@ router14.post("/deals", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to create deal" });
   }
 });
-router14.put("/deals/:id", isAdmin2, async (req, res) => {
+router13.put("/deals/:id", requireAdminAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { productId, dealType, dealValue, badgeText, priority, startsAt, endsAt, isActive } = req.body;
@@ -4625,7 +4881,7 @@ router14.put("/deals/:id", isAdmin2, async (req, res) => {
       endsAt: endsAt ? new Date(endsAt) : null,
       isActive,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq15(productDeals.id, id)).returning();
+    }).where(eq14(productDeals.id, id)).returning();
     if (!deal) return res.status(404).json({ message: "Deal not found" });
     res.json(deal);
   } catch (error) {
@@ -4633,10 +4889,10 @@ router14.put("/deals/:id", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to update deal" });
   }
 });
-router14.delete("/deals/:id", isAdmin2, async (req, res) => {
+router13.delete("/deals/:id", requireAdminAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const [deal] = await db.delete(productDeals).where(eq15(productDeals.id, id)).returning();
+    const [deal] = await db.delete(productDeals).where(eq14(productDeals.id, id)).returning();
     if (!deal) return res.status(404).json({ message: "Deal not found" });
     res.json({ message: "Deal deleted successfully" });
   } catch (error) {
@@ -4644,25 +4900,25 @@ router14.delete("/deals/:id", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to delete deal" });
   }
 });
-router14.get("/new-products/public", async (req, res) => {
+router13.get("/new-products/public", async (req, res) => {
   try {
-    const newProducts = await db.select().from(products).where(and10(eq15(products.isActive, true), eq15(products.isNew, true))).orderBy(desc3(products.launchedAt), desc3(products.createdAt)).limit(8);
+    const newProducts = await db.select().from(products).where(and10(eq14(products.isActive, true), eq14(products.isNew, true))).orderBy(desc3(products.launchedAt), desc3(products.createdAt)).limit(8);
     res.json(newProducts);
   } catch (error) {
     console.error("Error fetching new products:", error);
     res.status(500).json({ message: "Failed to fetch new products" });
   }
 });
-router14.get("/newsletter/public", async (req, res) => {
+router13.get("/newsletter/public", async (req, res) => {
   try {
-    const [settings] = await db.select().from(newsletterSettings).where(eq15(newsletterSettings.isActive, true)).limit(1);
+    const [settings] = await db.select().from(newsletterSettings).where(eq14(newsletterSettings.isActive, true)).limit(1);
     res.json(settings || null);
   } catch (error) {
     console.error("Error fetching newsletter settings:", error);
     res.status(500).json({ message: "Failed to fetch newsletter settings" });
   }
 });
-router14.get("/newsletter", isAdmin2, async (req, res) => {
+router13.get("/newsletter", requireAdminAccess, async (req, res) => {
   try {
     const [settings] = await db.select().from(newsletterSettings).limit(1);
     res.json(settings || null);
@@ -4671,12 +4927,12 @@ router14.get("/newsletter", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch newsletter settings" });
   }
 });
-router14.put("/newsletter", isAdmin2, async (req, res) => {
+router13.put("/newsletter", requireAdminAccess, async (req, res) => {
   try {
     const { title, subtitle, ctaText, placeholderText, isActive } = req.body;
     const [existing] = await db.select().from(newsletterSettings).limit(1);
     if (existing) {
-      const [updated] = await db.update(newsletterSettings).set({ title, subtitle, ctaText, placeholderText, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq15(newsletterSettings.id, existing.id)).returning();
+      const [updated] = await db.update(newsletterSettings).set({ title, subtitle, ctaText, placeholderText, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq14(newsletterSettings.id, existing.id)).returning();
       res.json(updated);
     } else {
       const [created] = await db.insert(newsletterSettings).values({ title, subtitle, ctaText, placeholderText, isActive }).returning();
@@ -4687,16 +4943,16 @@ router14.put("/newsletter", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to update newsletter settings" });
   }
 });
-router14.get("/footer/public", async (req, res) => {
+router13.get("/footer/public", async (req, res) => {
   try {
-    const [settings] = await db.select().from(footerSettings).where(eq15(footerSettings.isActive, true)).limit(1);
+    const [settings] = await db.select().from(footerSettings).where(eq14(footerSettings.isActive, true)).limit(1);
     res.json(settings || null);
   } catch (error) {
     console.error("Error fetching footer settings:", error);
     res.status(500).json({ message: "Failed to fetch footer settings" });
   }
 });
-router14.get("/footer", isAdmin2, async (req, res) => {
+router13.get("/footer", requireAdminAccess, async (req, res) => {
   try {
     const [settings] = await db.select().from(footerSettings).limit(1);
     res.json(settings || null);
@@ -4705,12 +4961,12 @@ router14.get("/footer", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch footer settings" });
   }
 });
-router14.put("/footer", isAdmin2, async (req, res) => {
+router13.put("/footer", requireAdminAccess, async (req, res) => {
   try {
     const { companyName, tagline, description, phone, email, address, socialLinks, footerLinks, copyrightText, isActive } = req.body;
     const [existing] = await db.select().from(footerSettings).limit(1);
     if (existing) {
-      const [updated] = await db.update(footerSettings).set({ companyName, tagline, description, phone, email, address, socialLinks, footerLinks, copyrightText, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq15(footerSettings.id, existing.id)).returning();
+      const [updated] = await db.update(footerSettings).set({ companyName, tagline, description, phone, email, address, socialLinks, footerLinks, copyrightText, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq14(footerSettings.id, existing.id)).returning();
       res.json(updated);
     } else {
       const [created] = await db.insert(footerSettings).values({ companyName, tagline, description, phone, email, address, socialLinks, footerLinks, copyrightText, isActive }).returning();
@@ -4721,40 +4977,23 @@ router14.put("/footer", isAdmin2, async (req, res) => {
     res.status(500).json({ message: "Failed to update footer settings" });
   }
 });
-var homepage_routes_default = router14;
+var homepage_routes_default = router13;
 
 // server/routes/cms.routes.ts
 init_db();
 init_schema();
-import { Router as Router15 } from "express";
-import { eq as eq16 } from "drizzle-orm";
-var router15 = Router15();
-var isAdmin3 = async (req, res, next) => {
+import { Router as Router14 } from "express";
+import { eq as eq15 } from "drizzle-orm";
+var router14 = Router14();
+router14.get("/about-us/public", async (req, res) => {
   try {
-    if (req.session?.isAdminLoggedIn === true) return next();
-    const userId = req.session?.userId;
-    if (!userId) return res.status(401).json({ message: "Not authenticated" });
-    if (req.session?.userRole === "admin") return next();
-    const { users: users5 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const [user] = await db.select().from(users5).where(eq16(users5.id, userId));
-    if (user?.role === "admin") {
-      req.session.userRole = "admin";
-      return next();
-    }
-    return res.status(403).json({ message: "Admin access required" });
-  } catch (error) {
-    return res.status(500).json({ message: "Error checking permissions" });
-  }
-};
-router15.get("/about-us/public", async (req, res) => {
-  try {
-    const [data] = await db.select().from(aboutUsSettings).where(eq16(aboutUsSettings.isActive, true));
+    const [data] = await db.select().from(aboutUsSettings).where(eq15(aboutUsSettings.isActive, true));
     res.json(data || {});
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch about us" });
   }
 });
-router15.get("/about-us", isAdmin3, async (req, res) => {
+router14.get("/about-us", requireAdminAccess, async (req, res) => {
   try {
     const [data] = await db.select().from(aboutUsSettings);
     res.json(data || {});
@@ -4762,24 +5001,62 @@ router15.get("/about-us", isAdmin3, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch about us" });
   }
 });
-router15.put("/about-us", isAdmin3, async (req, res) => {
+router14.put("/about-us", requireAdminAccess, async (req, res) => {
   try {
-    const { title, subtitle, content, imageUrl, mission, vision, values, isActive } = req.body;
-    const [data] = await db.update(aboutUsSettings).set({ title, subtitle, content, imageUrl, mission, vision, values, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq16(aboutUsSettings.id, 1)).returning();
+    const {
+      heroTitle,
+      heroSubtitle,
+      heroImageUrl,
+      heroCtaText,
+      heroCtaLink,
+      storyHeading,
+      storyDescription,
+      storyImageUrl,
+      valuesTitle,
+      values,
+      processTitle,
+      processSteps,
+      ctaHeading,
+      ctaSubheading,
+      ctaButtonText,
+      ctaButtonLink,
+      isActive
+    } = req.body;
+    const [data] = await db.update(aboutUsSettings).set({
+      heroTitle,
+      heroSubtitle,
+      heroImageUrl,
+      heroCtaText,
+      heroCtaLink,
+      storyHeading,
+      storyDescription,
+      storyImageUrl,
+      valuesTitle,
+      values,
+      processTitle,
+      processSteps,
+      ctaHeading,
+      ctaSubheading,
+      ctaButtonText,
+      ctaButtonLink,
+      isActive,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq15(aboutUsSettings.id, 1)).returning();
     res.json(data);
   } catch (error) {
+    console.error("Update About Us error:", error);
     res.status(500).json({ message: "Failed to update about us" });
   }
 });
-router15.get("/contact/public", async (req, res) => {
+router14.get("/contact/public", async (req, res) => {
   try {
-    const [data] = await db.select().from(contactSettings).where(eq16(contactSettings.isActive, true));
+    const [data] = await db.select().from(contactSettings).where(eq15(contactSettings.isActive, true));
     res.json(data || {});
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch contact info" });
   }
 });
-router15.get("/contact", isAdmin3, async (req, res) => {
+router14.get("/contact", requireAdminAccess, async (req, res) => {
   try {
     const [data] = await db.select().from(contactSettings);
     res.json(data || {});
@@ -4787,24 +5064,48 @@ router15.get("/contact", isAdmin3, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch contact info" });
   }
 });
-router15.put("/contact", isAdmin3, async (req, res) => {
+router14.put("/contact", requireAdminAccess, async (req, res) => {
   try {
-    const { title, subtitle, phone, email, address, businessHours, socialLinks, mapEmbedUrl, isActive } = req.body;
-    const [data] = await db.update(contactSettings).set({ title, subtitle, phone, email, address, businessHours, socialLinks, mapEmbedUrl, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq16(contactSettings.id, 1)).returning();
+    const {
+      heroTitle,
+      heroSubtitle,
+      heroImageUrl,
+      phone,
+      email,
+      address,
+      businessHours,
+      socialLinks,
+      mapEmbedUrl,
+      isActive
+    } = req.body;
+    const [data] = await db.update(contactSettings).set({
+      heroTitle,
+      heroSubtitle,
+      heroImageUrl,
+      phone,
+      email,
+      address,
+      businessHours,
+      socialLinks,
+      mapEmbedUrl,
+      isActive,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq15(contactSettings.id, 1)).returning();
     res.json(data);
   } catch (error) {
+    console.error("Update Contact error:", error);
     res.status(500).json({ message: "Failed to update contact info" });
   }
 });
-router15.get("/terms-of-service/public", async (req, res) => {
+router14.get("/terms-of-service/public", async (req, res) => {
   try {
-    const [data] = await db.select().from(termsOfServiceSettings).where(eq16(termsOfServiceSettings.isActive, true));
+    const [data] = await db.select().from(termsOfServiceSettings).where(eq15(termsOfServiceSettings.isActive, true));
     res.json(data || {});
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch terms of service" });
   }
 });
-router15.get("/terms-of-service", isAdmin3, async (req, res) => {
+router14.get("/terms-of-service", requireAdminAccess, async (req, res) => {
   try {
     const [data] = await db.select().from(termsOfServiceSettings);
     res.json(data || {});
@@ -4812,24 +5113,24 @@ router15.get("/terms-of-service", isAdmin3, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch terms of service" });
   }
 });
-router15.put("/terms-of-service", isAdmin3, async (req, res) => {
+router14.put("/terms-of-service", requireAdminAccess, async (req, res) => {
   try {
     const { title, content, sections, isActive } = req.body;
-    const [data] = await db.update(termsOfServiceSettings).set({ title, content, sections, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq16(termsOfServiceSettings.id, 1)).returning();
+    const [data] = await db.update(termsOfServiceSettings).set({ title, content, sections, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq15(termsOfServiceSettings.id, 1)).returning();
     res.json(data);
   } catch (error) {
     res.status(500).json({ message: "Failed to update terms of service" });
   }
 });
-router15.get("/privacy-policy/public", async (req, res) => {
+router14.get("/privacy-policy/public", async (req, res) => {
   try {
-    const [data] = await db.select().from(privacyPolicySettings).where(eq16(privacyPolicySettings.isActive, true));
+    const [data] = await db.select().from(privacyPolicySettings).where(eq15(privacyPolicySettings.isActive, true));
     res.json(data || {});
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch privacy policy" });
   }
 });
-router15.get("/privacy-policy", isAdmin3, async (req, res) => {
+router14.get("/privacy-policy", requireAdminAccess, async (req, res) => {
   try {
     const [data] = await db.select().from(privacyPolicySettings);
     res.json(data || {});
@@ -4837,29 +5138,29 @@ router15.get("/privacy-policy", isAdmin3, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch privacy policy" });
   }
 });
-router15.put("/privacy-policy", isAdmin3, async (req, res) => {
+router14.put("/privacy-policy", requireAdminAccess, async (req, res) => {
   try {
     const { title, content, sections, isActive } = req.body;
-    const [data] = await db.update(privacyPolicySettings).set({ title, content, sections, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq16(privacyPolicySettings.id, 1)).returning();
+    const [data] = await db.update(privacyPolicySettings).set({ title, content, sections, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq15(privacyPolicySettings.id, 1)).returning();
     res.json(data);
   } catch (error) {
     res.status(500).json({ message: "Failed to update privacy policy" });
   }
 });
-var cms_routes_default = router15;
+var cms_routes_default = router14;
 
 // server/routes/contact-submissions.routes.ts
 init_db();
 init_schema();
-import { eq as eq17, desc as desc4 } from "drizzle-orm";
+import { eq as eq16, desc as desc4 } from "drizzle-orm";
 function setupContactSubmissionsRoutes(app2) {
   app2.post("/api/contact-submissions", async (req, res) => {
     try {
-      const { name, email, message } = req.body;
+      const { name, email, phone, message } = req.body;
       if (!name || !email || !message) {
-        return res.status(400).json({ message: "All fields required" });
+        return res.status(400).json({ message: "Name, email and message are required" });
       }
-      const [submission] = await db.insert(contactSubmissions).values({ name, email, message, status: "new" }).returning();
+      const [submission] = await db.insert(contactSubmissions).values({ name, email, phone, message, status: "new" }).returning();
       res.status(201).json(submission);
     } catch (error) {
       res.status(500).json({ message: "Failed to submit contact form" });
@@ -4875,7 +5176,7 @@ function setupContactSubmissionsRoutes(app2) {
   });
   app2.put("/api/admin/contact-submissions/:id/read", async (req, res) => {
     try {
-      const [submission] = await db.update(contactSubmissions).set({ status: "read", updatedAt: /* @__PURE__ */ new Date() }).where(eq17(contactSubmissions.id, parseInt(req.params.id))).returning();
+      const [submission] = await db.update(contactSubmissions).set({ status: "read", updatedAt: /* @__PURE__ */ new Date() }).where(eq16(contactSubmissions.id, parseInt(req.params.id))).returning();
       res.json(submission);
     } catch (error) {
       res.status(500).json({ message: "Failed to update submission" });
@@ -4883,7 +5184,7 @@ function setupContactSubmissionsRoutes(app2) {
   });
   app2.delete("/api/admin/contact-submissions/:id", async (req, res) => {
     try {
-      await db.delete(contactSubmissions).where(eq17(contactSubmissions.id, parseInt(req.params.id)));
+      await db.delete(contactSubmissions).where(eq16(contactSubmissions.id, parseInt(req.params.id)));
       res.json({ message: "Deleted" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete submission" });
@@ -4894,13 +5195,13 @@ function setupContactSubmissionsRoutes(app2) {
 // server/jobs/auto-delivery.ts
 init_db();
 init_schema();
-import { eq as eq18 } from "drizzle-orm";
+import { eq as eq17 } from "drizzle-orm";
 async function generateDailyDeliveries() {
   try {
     const tomorrow = /* @__PURE__ */ new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split("T")[0];
-    const activeSubscriptions = await db.select().from(milkSubscriptions).where(eq18(milkSubscriptions.status, "ACTIVE"));
+    const activeSubscriptions = await db.select().from(milkSubscriptions).where(eq17(milkSubscriptions.status, "ACTIVE"));
     for (const sub of activeSubscriptions) {
       if (sub.frequency === "daily") {
         await db.insert(subscriptionDeliveries).values({
@@ -4922,7 +5223,7 @@ async function generateDailyDeliveries() {
           }).catch(() => null);
         }
       } else if (sub.frequency === "alternate") {
-        const lastDelivery = await db.select().from(subscriptionDeliveries).where(eq18(subscriptionDeliveries.subscriptionId, sub.id));
+        const lastDelivery = await db.select().from(subscriptionDeliveries).where(eq17(subscriptionDeliveries.subscriptionId, sub.id));
         if (lastDelivery.length === 0) {
           await db.insert(subscriptionDeliveries).values({
             subscriptionId: sub.id,
@@ -4959,7 +5260,48 @@ async function registerRoutes(app2) {
   app2.use("/api/cart", cart_routes_default);
   app2.use("/api/addresses", address_routes_default);
   app2.use("/api/orders", order_routes_default);
-  app2.use("/api/admin/orders", admin_orders_routes_default);
+  app2.get("/api/admin/orders", requireAdminAccess, async (req, res) => {
+    try {
+      const { orders: orders2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const status = req.query.status;
+      let allOrders = await db2.select().from(orders2);
+      if (status) allOrders = allOrders.filter((o) => o.status === status);
+      res.json(allOrders);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+  app2.post("/api/admin/orders/:id/update-status", requireAdminAccess, async (req, res) => {
+    try {
+      const { orders: orders2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const { eq: eq23 } = await import("drizzle-orm");
+      const orderId = parseInt(req.params.id);
+      const { status, paymentStatus } = req.body;
+      const updated = await storage.updateOrderStatus(orderId, status);
+      if (paymentStatus) {
+        await storage.updateOrderPayment(orderId, { paymentStatus });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update order" });
+    }
+  });
+  app2.delete("/api/admin/orders/:id", requireAdminAccess, async (req, res) => {
+    try {
+      const { orders: orders2, orderItems: orderItems4 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const { eq: eq23 } = await import("drizzle-orm");
+      const orderId = parseInt(req.params.id);
+      await db2.delete(orderItems4).where(eq23(orderItems4.orderId, orderId));
+      const deleted = await db2.delete(orders2).where(eq23(orders2.id, orderId)).returning();
+      if (!deleted.length) return res.status(404).json({ message: "Order not found" });
+      res.json({ success: true, message: "Order deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete order" });
+    }
+  });
   app2.use("/api/admin/customers", admin_customers_routes_default);
   app2.use("/api/admin/billing", admin_billing_routes_default);
   app2.use("/api/support", support_routes_default);
@@ -5052,14 +5394,14 @@ async function registerRoutes(app2) {
 
 // server/vite.ts
 import express from "express";
-import fs from "fs";
-import path2 from "path";
+import fs2 from "fs";
+import path3 from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 
 // vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "path";
+import path2 from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 var vite_config_default = defineConfig({
   plugins: [
@@ -5073,14 +5415,14 @@ var vite_config_default = defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets")
+      "@": path2.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path2.resolve(import.meta.dirname, "shared"),
+      "@assets": path2.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  root: path.resolve(import.meta.dirname, "client"),
+  root: path2.resolve(import.meta.dirname, "client"),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path2.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true
   },
   server: {
@@ -5126,13 +5468,13 @@ async function setupVite(app2, server) {
   app2.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path2.resolve(
+      const clientTemplate = path3.resolve(
         import.meta.dirname,
         "..",
         "client",
         "index.html"
       );
-      let template = await fs.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs2.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid2()}"`
@@ -5146,261 +5488,292 @@ async function setupVite(app2, server) {
   });
 }
 function serveStatic(app2) {
-  const distPath = path2.resolve(import.meta.dirname, "public");
-  if (!fs.existsSync(distPath)) {
+  const distPath = path3.resolve(import.meta.dirname, "public");
+  if (!fs2.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app2.use(express.static(distPath));
   app2.use("*", (_req, res) => {
-    res.sendFile(path2.resolve(distPath, "index.html"));
+    res.sendFile(path3.resolve(distPath, "index.html"));
   });
 }
 
 // server/seed.ts
 init_db();
 init_schema();
-import * as bcryptjs2 from "bcryptjs";
+import { eq as eq19 } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import { nanoid as nanoid3 } from "nanoid";
 async function seedDatabase() {
   try {
-    const existingUsers = await db.select().from(users2).limit(1);
+    console.log("Seeding database...");
+    const adminEmail = "md@divinenaturals.in";
+    const existingUsers = await db.select().from(users2).where(eq19(users2.email, adminEmail));
     if (existingUsers.length > 0) {
-      console.log("Database already seeded, skipping...");
-      return;
-    }
-    console.log("Seeding database with mock data...");
-    const salt = await bcryptjs2.genSalt(10);
-    const adminPasswordHash = await bcryptjs2.hash("admin123", salt);
-    const customerPasswordHash = await bcryptjs2.hash("customer123", salt);
-    const mockUsers = [
-      // Customers
-      { id: "user-customer-1", email: "customer1@divine.com", firstName: "Priya", lastName: "Patel", role: "customer", phone: "+91-9876543210", walletBalance: "500.00", passwordHash: customerPasswordHash },
-      { id: "user-customer-2", email: "customer2@divine.com", firstName: "Rahul", lastName: "Mehta", role: "customer", phone: "+91-9876543211", walletBalance: "300.00", passwordHash: customerPasswordHash },
-      // Vendors
-      { id: "user-vendor-1", email: "vendor1@divine.com", firstName: "Rajesh", lastName: "Kumar", role: "vendor", phone: "+91-9876543212", walletBalance: "0", passwordHash: customerPasswordHash },
-      { id: "user-vendor-2", email: "vendor2@divine.com", firstName: "Amit", lastName: "Shah", role: "vendor", phone: "+91-9876543213", walletBalance: "0", passwordHash: customerPasswordHash },
-      // Delivery Partners
-      { id: "user-delivery-1", email: "delivery1@divine.com", firstName: "Suresh", lastName: "Singh", role: "delivery", phone: "+91-9876543214", walletBalance: "0", passwordHash: customerPasswordHash },
-      { id: "user-delivery-2", email: "delivery2@divine.com", firstName: "Vijay", lastName: "Sharma", role: "delivery", phone: "+91-9876543215", walletBalance: "0", passwordHash: customerPasswordHash },
-      // Admins - WITH PASSWORDS
-      { id: "user-admin-1", email: "admin1@divine.com", firstName: "Admin", lastName: "Super", role: "admin", phone: "+91-9876543216", walletBalance: "0", passwordHash: adminPasswordHash },
-      { id: "user-admin-2", email: "admin2@divine.com", firstName: "Admin", lastName: "Manager", role: "admin", phone: "+91-9876543217", walletBalance: "0", passwordHash: adminPasswordHash }
-    ];
-    for (const user of mockUsers) {
-      await db.insert(users2).values(user);
-    }
-    console.log("\u2713 Created 8 mock users (2 per role)");
-    await db.insert(vendors).values([
-      {
-        userId: "user-vendor-1",
-        businessName: "Fresh Dairy Co.",
-        licenseNumber: "DL-2018-MH-001",
-        locationName: "Andheri West",
-        vendorType: "VENDOR",
-        dailyCapacity: 2e3,
-        requirementToday: 500,
-        circulatedLiters: 425,
-        revenueToday: "21250.00",
-        weeklyEarnings: "148750.00",
-        isVerified: true
-      },
-      {
-        userId: "user-vendor-2",
-        businessName: "Divine Naturals Farm",
-        licenseNumber: "DL-2019-MH-002",
-        locationName: "Santa Cruz",
-        vendorType: "VENDOR",
-        dailyCapacity: 1500,
-        requirementToday: 400,
-        circulatedLiters: 380,
-        revenueToday: "19000.00",
-        weeklyEarnings: "133000.00",
-        isVerified: false
-      }
-    ]);
-    console.log("\u2713 Created 2 vendor profiles");
-    await db.insert(deliveryPartners).values([
-      {
-        userId: "user-delivery-1",
-        fullName: "Suresh Singh",
-        phone: "+91-9876543214",
-        vehicleType: "Electric Scooter",
-        licenseNumber: "DL-123456",
-        zone: "Andheri-Santacruz",
-        isAvailable: true,
-        status: "active"
-      },
-      {
-        userId: "user-delivery-2",
-        fullName: "Vijay Sharma",
-        phone: "+91-9876543215",
+      console.log("Database already seeded. Updating CMS content only...");
+    } else {
+      const hashedPassword = await bcrypt.hash("DivineNaturals@2025", 10);
+      const [adminUser] = await db.insert(users2).values({
+        id: nanoid3(),
+        email: adminEmail,
+        passwordHash: hashedPassword,
+        role: "admin",
+        firstName: "Kauldeep",
+        lastName: "Rao",
+        phone: "1800-DIVINE"
+      }).returning();
+      const [customerUser] = await db.insert(users2).values({
+        id: nanoid3(),
+        email: "customer@example.com",
+        passwordHash: hashedPassword,
+        role: "customer",
+        firstName: "Test",
+        lastName: "Customer",
+        phone: "9876543210",
+        address: "123 Green Lane, Mumbai"
+      }).returning();
+      const [partnerUser] = await db.insert(users2).values({
+        id: nanoid3(),
+        email: "delivery@example.com",
+        passwordHash: hashedPassword,
+        role: "delivery",
+        firstName: "Delivery",
+        lastName: "Hero"
+      }).returning();
+      await db.insert(deliveryPartners).values({
+        userId: partnerUser.id,
+        fullName: "Delivery Hero",
+        phone: "9123456789",
         vehicleType: "Bike",
-        licenseNumber: "DL-789012",
-        zone: "Borivali-Malad",
-        isAvailable: true,
         status: "active"
-      }
-    ]);
-    console.log("\u2713 Created 2 delivery partner profiles");
-    const vendorList = await db.select().from(vendors);
-    const mockProducts = [
+      });
+      console.log("\u2713 Inserted/Updated Base Data (Users)");
+    }
+    const baseProducts = [
       {
-        name: "Full Cream Milk",
-        sku: "MILK-FC-001",
-        description: "Rich and creamy full cream milk",
-        category: "MILK",
-        type: "MILK",
-        price: "60.00",
-        unit: "L",
+        name: "Cold Pressed Coconut Oil",
+        description: "Pure, edible grade cold pressed coconut oil. Multi-purpose oil with a fresh coconut aroma and superior quality.",
+        price: "380",
+        unit: "500ml",
         stock: 100,
-        imageUrl: "/images/full_cream_milk_in_bottle.png",
-        isActive: true
+        category: "Oil",
+        type: "DAIRY",
+        imageUrl: "/products/coconut_oil.png",
+        sku: "OIL-COCO-001"
       },
       {
-        name: "Toned Milk",
-        sku: "MILK-TN-002",
-        description: "Healthy toned milk with reduced fat",
-        category: "MILK",
-        type: "MILK",
-        price: "50.00",
-        unit: "L",
+        name: "Cold Pressed Groundnut Oil",
+        description: "Pure and aromatic cold pressed groundnut oil. Extracted using traditional wooden ghani methods to retain nutrients and natural flavor.",
+        price: "280",
+        unit: "1L",
         stock: 150,
-        imageUrl: "/images/toned_milk_in_glass.png",
-        isActive: true
-      },
-      {
-        name: "Fresh Curd",
-        sku: "DAIRY-CURD-001",
-        description: "Thick and creamy fresh curd",
-        category: "DAIRY",
+        category: "Oil",
         type: "DAIRY",
-        price: "40.00",
-        unit: "500g",
-        stock: 80,
-        imageUrl: "/images/fresh_curd_in_ceramic_bowl.png",
-        isActive: true
-      },
-      {
-        name: "Paneer",
-        sku: "DAIRY-PANEER-001",
-        description: "Fresh cottage cheese",
-        category: "DAIRY",
-        type: "DAIRY",
-        price: "120.00",
-        unit: "250g",
-        stock: 50,
-        imageUrl: "/images/fresh_paneer_cheese_cubes.png",
-        isActive: true
+        imageUrl: "/products/groundnut_oil.png",
+        sku: "OIL-GNUT-001"
       },
       {
         name: "Buttermilk",
-        sku: "DAIRY-BM-001",
         description: "Refreshing traditional buttermilk",
-        category: "DAIRY",
-        type: "DAIRY",
-        price: "25.00",
+        price: "25",
         unit: "500ml",
-        stock: 120,
-        imageUrl: "/images/traditional_buttermilk_drink.png",
-        isActive: true
+        stock: 300,
+        category: "Beverages",
+        type: "DAIRY",
+        imageUrl: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=800",
+        sku: "DAIRY-BMLK-001"
       }
     ];
-    for (const product of mockProducts) {
-      await db.insert(products).values(product);
+    for (const p of baseProducts) {
+      const [existing] = await db.select().from(products).where(eq19(products.sku, p.sku));
+      if (existing) {
+        await db.update(products).set(p).where(eq19(products.sku, p.sku));
+      } else {
+        await db.insert(products).values(p);
+      }
     }
-    console.log("\u2713 Created 5 products");
-    await db.insert(milkSubscriptions).values([
+    console.log("\u2713 Updated Products from seed data");
+    console.log("Refreshing CMS content with premium assets...");
+    await db.delete(banners);
+    await db.insert(banners).values([
       {
-        userId: "user-customer-1",
-        quantity: 2,
-        frequency: "daily",
-        deliveryTime: "6:00 AM",
-        startDate: "2025-01-01",
-        isActive: true,
-        pricePerL: "60.00",
-        status: "ACTIVE"
+        title: "Pure. Fresh. From Our Farm to Your Home.",
+        subtitle: "Experience the authentic taste of raw A2 Gir Cow milk, delivered directly to your doorstep every morning.",
+        imageUrl: "/banners/farm_milk_bottles_pastoral_scene.png",
+        imageUrlTablet: "/banners/farm_milk_bottles_pastoral_scene.png",
+        imageUrlMobile: "/banners/farm_milk_bottles_pastoral_scene.png",
+        ctaText: "Start Subscription",
+        ctaLink: "/shop",
+        displayOrder: 1,
+        isActive: true
       },
       {
-        userId: "user-customer-1",
-        quantity: 1,
-        frequency: "daily",
-        deliveryTime: "6:30 AM",
-        startDate: "2025-01-01",
-        isActive: true,
-        pricePerL: "50.00",
-        status: "ACTIVE"
+        title: "Unmatched Delivery. Consistent Quality.",
+        subtitle: "At Divine Naturals, we take pride in our 4:00 AM delivery promise. Freshness that doesn't wait.",
+        imageUrl: "/banners/fresh_milk_pour_splash_banner.png",
+        imageUrlTablet: "/banners/fresh_milk_pour_splash_banner.png",
+        imageUrlMobile: "/banners/fresh_milk_pour_splash_banner.png",
+        ctaText: "View Products",
+        ctaLink: "/shop",
+        displayOrder: 2,
+        isActive: true
       },
       {
-        userId: "user-customer-2",
-        quantity: 1,
-        frequency: "daily",
-        deliveryTime: "7:00 AM",
-        startDate: "2025-01-05",
-        isActive: true,
-        pricePerL: "60.00",
-        status: "ACTIVE"
+        title: "Traditional Goodness, Modern Safety.",
+        subtitle: "We use the traditional Bilona method for Ghee and state-of-the-art testing for every batch of milk.",
+        imageUrl: "/banners/premium_dairy_products_showcase.png",
+        imageUrlTablet: "/banners/premium_dairy_products_showcase.png",
+        imageUrlMobile: "/banners/premium_dairy_products_showcase.png",
+        ctaText: "Learn About Us",
+        ctaLink: "/about",
+        displayOrder: 3,
+        isActive: true
       }
     ]);
-    console.log("\u2713 Created 3 active subscriptions");
-    await db.insert(aboutUsSettings).values({
-      title: "About Divine Naturals",
-      subtitle: "Pure. Fresh. Daily.",
-      content: "Divine Naturals is a minimalist, eco-friendly dairy delivery platform dedicated to bringing fresh, pure dairy products directly to your doorstep. We believe in supporting local farmers and delivering only the highest quality dairy products.",
-      imageUrl: "/images/full_cream_milk_in_bottle.png",
-      mission: "To provide eco-friendly, fresh dairy products while supporting local farmers and promoting sustainable practices.",
-      vision: "To become the leading dairy delivery platform known for quality, reliability, and environmental consciousness.",
-      values: JSON.stringify([
-        { title: "Farm Fresh", description: "We source directly from trusted local farms" },
-        { title: "Pure & Natural", description: "No additives, preservatives, or artificial ingredients" },
-        { title: "Supporting Farmers", description: "Fair pricing that benefits our farming partners" },
-        { title: "Quality Assured", description: "Every product meets our strict quality standards" }
-      ]),
+    console.log("\u2713 Updated 3 Hero Banners");
+    await db.delete(ethosCards);
+    await db.insert(ethosCards).values([
+      {
+        title: "Source Transparency",
+        description: "Every bottle of milk can be traced back to the specific farm it came from.",
+        icon: "Shield",
+        displayOrder: 1
+      },
+      {
+        title: "Zero Preservatives",
+        description: "Fresh milk with absolutely no additives, milk powder, or preservatives.",
+        icon: "Zap",
+        displayOrder: 2
+      },
+      {
+        title: "Eco-Friendly Loop",
+        description: "We use sterilized glass bottles and sustainable packaging to protect our planet.",
+        icon: "Recycle",
+        displayOrder: 3
+      },
+      {
+        title: "Smart Subscriptions",
+        description: "Pause, resume, and modify your daily dairy needs through our easy-to-use app.",
+        icon: "Smartphone",
+        displayOrder: 4
+      }
+    ]);
+    console.log("\u2713 Updated 4 Ethos Cards");
+    await db.delete(statsCounters);
+    await db.insert(statsCounters).values([
+      { label: "Happy Households", value: 12e3, suffix: "+", icon: "Users", displayOrder: 1 },
+      { label: "Liters of Milk Daily", value: 5500, suffix: "L", icon: "Milk", displayOrder: 2 },
+      { label: "Partner Farms", value: 45, suffix: "", icon: "Home", displayOrder: 3 },
+      { label: "On-Time Deliveries", value: 99, suffix: ".8%", icon: "Clock", displayOrder: 4 }
+    ]);
+    console.log("\u2713 Updated 4 Stats Counters");
+    await db.delete(faqs2);
+    await db.insert(faqs2).values([
+      {
+        question: "How do subscriptions work?",
+        answer: "You can choose your products, set the quantity and frequency (daily, alternate days, or custom), and we'll deliver them automatically. You can pause or cancel anytime through the app.",
+        category: "Delivery",
+        order: 1,
+        displayOrder: 1
+      },
+      {
+        question: "Is there a minimum delivery amount?",
+        answer: "No, we don't believe in forcing our customers. You can subscribe to even a single half-liter packet or bottle of milk.",
+        category: "Delivery",
+        order: 2,
+        displayOrder: 2
+      },
+      {
+        question: "How is the milk tested for quality?",
+        answer: "We test across 50+ parameters including milk fat, protein, SNF, and the absence of water, urea, or any preservatives in our ISO-certified labs.",
+        category: "Quality",
+        order: 3,
+        displayOrder: 3
+      }
+    ]);
+    console.log("\u2713 Updated 3 FAQs");
+    const [existingAbout] = await db.select().from(aboutUsSettings).limit(1);
+    const aboutData = {
+      title: "The Divine Naturals Story",
+      subtitle: "Returning to Root-Level Purity",
+      content: "Founded with a single mission to restore the vanishing purity of farm-fresh milk in our cities, Divine Naturals has grown into a community of conscious consumers and ethical farmers. We leverage technology to bridge the gap between rural farms and urban doorsteps, ensuring that what you drink is as fresh as it was at the farm.",
+      imageUrl: "/images/products/milk.png",
+      mission: "To deliver the purest dairy products while empowering traditional farming communities through technology and fair commerce.",
+      vision: "A world where fresh, organic, and ethically sourced nutrition is accessible to every household daily.",
+      values: [
+        { title: "Radical Transparency", description: "Trace every drop back to the farm" },
+        { title: "Empowering Farmers", description: "Eliminating middlemen and ensuring fair trade" },
+        { title: "Environmental Stewardship", description: "Minimizing waste through sustainable packaging" }
+      ],
       isActive: true
-    }).onConflictDoNothing();
-    await db.insert(contactSettings).values({
-      title: "Contact Us",
-      subtitle: "We'd love to hear from you. Get in touch with us today!",
-      phone: "+91-9876543210",
-      email: "support@divinenaturals.com",
-      address: "123 Dairy Lane, Mumbai, Maharashtra 400001, India",
-      businessHours: "Mon-Sat: 6:00 AM - 10:00 PM, Sun: 7:00 AM - 8:00 PM",
-      socialLinks: JSON.stringify({
-        facebook: "https://facebook.com/divinenaturals",
-        instagram: "https://instagram.com/divinenaturals",
-        twitter: "https://twitter.com/divinenaturals"
-      }),
-      mapEmbedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3769.823529!2d72.82!3d19.09!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3be7c9c5c5c5c5c5%3A0x5c5c5c5c5c5c5c5c!2sMumbai%2C%20Maharashtra!5e0!3m2!1sen!2sin!4v1234567890",
+    };
+    if (existingAbout) {
+      await db.update(aboutUsSettings).set(aboutData).where(eq19(aboutUsSettings.id, existingAbout.id));
+    } else {
+      await db.insert(aboutUsSettings).values(aboutData);
+    }
+    const [existingContact] = await db.select().from(contactSettings).limit(1);
+    const contactData = {
+      title: "Get in Touch",
+      subtitle: "Our customer success team is here for you 24/7.",
+      phone: "+91 91234 56789",
+      email: "hello@divinenaturals.com",
+      address: "Divine Naturals Hub, Sector 44, Gurgaon, Haryana 122003",
+      businessHours: "Delivery: 4:00 AM - 7:30 AM | Support: 9:00 AM - 9:00 PM",
+      socialLinks: [
+        { platform: "facebook", url: "https://facebook.com/divinenaturals" },
+        { platform: "instagram", url: "https://instagram.com/divinenaturals" },
+        { platform: "whatsapp", url: "https://wa.me/919123456789" }
+      ],
       isActive: true
-    }).onConflictDoNothing();
-    await db.insert(termsOfServiceSettings).values({
-      title: "Terms of Service",
-      content: "Please read these terms carefully. By using Divine Naturals, you agree to all terms and conditions listed below.",
-      sections: JSON.stringify([
-        { title: "Service Description", content: "Divine Naturals provides dairy product delivery services to customers in selected areas." },
-        { title: "User Responsibilities", content: "Users must provide accurate information and maintain account security." },
-        { title: "Delivery Terms", content: "Deliveries are made during specified time slots. Delays may occur due to unforeseen circumstances." },
-        { title: "Payment", content: "Payment is due upon delivery unless otherwise agreed. We accept cash, UPI, card, and net banking." },
-        { title: "Returns & Refunds", content: "Defective products may be returned within 24 hours of delivery for replacement or refund." },
-        { title: "Liability", content: "Divine Naturals is not liable for damages during delivery or mishandling by customers." }
-      ]),
+    };
+    if (existingContact) {
+      await db.update(contactSettings).set(contactData).where(eq19(contactSettings.id, existingContact.id));
+    } else {
+      await db.insert(contactSettings).values(contactData);
+    }
+    const [existingNewsletter] = await db.select().from(newsletterSettings).limit(1);
+    const newsletterData = {
+      title: "Join the Freshness Revolution",
+      subtitle: "Get nutrition tips, farm stories, and exclusive offers delivered to your inbox.",
+      ctaText: "Subscribe",
+      placeholderText: "Enter your email address",
       isActive: true
-    }).onConflictDoNothing();
-    await db.insert(privacyPolicySettings).values({
-      title: "Privacy Policy",
-      content: "Your privacy is important to us. This policy explains how we collect, use, and protect your personal information.",
-      sections: JSON.stringify([
-        { title: "Data Collection", content: "We collect name, phone, email, and address information to provide delivery services." },
-        { title: "Data Usage", content: "Your data is used only for order processing, delivery, and customer support." },
-        { title: "Data Security", content: "We use industry-standard security measures to protect your personal information." },
-        { title: "Third-Party Sharing", content: "We do not share your data with third parties without your consent." },
-        { title: "Cookies", content: "We use cookies to improve your browsing experience and remember your preferences." },
-        { title: "Data Retention", content: "We retain your data for as long as necessary to provide services and comply with law." }
-      ]),
+    };
+    if (existingNewsletter) {
+      await db.update(newsletterSettings).set(newsletterData).where(eq19(newsletterSettings.id, existingNewsletter.id));
+    } else {
+      await db.insert(newsletterSettings).values(newsletterData);
+    }
+    const [existingFooter] = await db.select().from(footerSettings).limit(1);
+    const footerData = {
+      companyName: "Divine Naturals Dairy Pvt Ltd",
+      tagline: "Pure. Fresh. Daily.",
+      description: "Dedicated to bringing the authentic taste and nutrition of the farm to the modern table through sustainable and ethical practices.",
+      phone: "+91 91234 56789",
+      email: "hello@divinenaturals.com",
+      address: "Sector 44, Gurgaon, Haryana 122003",
+      socialLinks: [
+        { platform: "facebook", url: "https://facebook.com/divinenaturals" },
+        { platform: "instagram", url: "https://instagram.com/divinenaturals" },
+        { platform: "whatsapp", url: "https://wa.me/919123456789" }
+      ],
+      footerLinks: [
+        { title: "Products", links: [{ label: "Milk", url: "/shop" }, { label: "Curd", url: "/shop" }, { label: "Ghee", url: "/shop" }] },
+        { title: "Company", links: [{ label: "About Us", url: "/about" }, { label: "Contact", url: "/contact" }, { label: "Privacy", url: "/privacy" }] }
+      ],
+      copyrightText: "\xA9 2025 Divine Naturals. All rights reserved.",
       isActive: true
-    }).onConflictDoNothing();
-    console.log("\u2713 Created CMS content for About Us, Contact, Terms of Service, and Privacy Policy");
-    console.log("\u2705 Database seeding completed successfully!");
+    };
+    if (existingFooter) {
+      await db.update(footerSettings).set(footerData).where(eq19(footerSettings.id, existingFooter.id));
+    } else {
+      await db.insert(footerSettings).values(footerData);
+    }
+    console.log("\u2713 Enriched CMS content");
+    console.log("\u2705 Database seeding/update completed successfully!");
   } catch (error) {
     console.error("Error seeding database:", error);
     throw error;
@@ -5410,7 +5783,7 @@ async function seedDatabase() {
 // server/jobs/generateMonthlyBills.ts
 init_db();
 init_schema();
-import { eq as eq20, and as and11, gte as gte6, lte as lte6 } from "drizzle-orm";
+import { eq as eq20, and as and11, gte as gte7, lte as lte7 } from "drizzle-orm";
 async function generateMonthlyBills() {
   console.log("\u{1F550} Starting monthly bill generation...");
   try {
@@ -5436,8 +5809,8 @@ async function generateMonthlyBills() {
       const subscriptionDeliveries_list = await db.select().from(subscriptionDeliveries).where(
         and11(
           eq20(subscriptionDeliveries.userId, user.id),
-          gte6(subscriptionDeliveries.deliveryDate, startDateStr),
-          lte6(subscriptionDeliveries.deliveryDate, endDateStr)
+          gte7(subscriptionDeliveries.deliveryDate, startDateStr),
+          lte7(subscriptionDeliveries.deliveryDate, endDateStr)
         )
       );
       const startDate = new Date(year, month - 1, 1);
@@ -5445,8 +5818,8 @@ async function generateMonthlyBills() {
       const monthOrders = await db.select().from(orders).where(
         and11(
           eq20(orders.userId, user.id),
-          gte6(orders.createdAt, startDate),
-          lte6(orders.createdAt, endDate)
+          gte7(orders.createdAt, startDate),
+          lte7(orders.createdAt, endDate)
         )
       );
       let subscriptionTotal = 0;
@@ -5541,11 +5914,11 @@ async function updateOverdueBills() {
 // server/routes/delivery.routes.ts
 init_db();
 init_schema();
-import { Router as Router16 } from "express";
+import { Router as Router15 } from "express";
 import { eq as eq21, and as and12 } from "drizzle-orm";
-import bcryptjs3 from "bcryptjs";
-var router16 = Router16();
-router16.post("/login", async (req, res) => {
+import bcryptjs2 from "bcryptjs";
+var router15 = Router15();
+router15.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -5563,7 +5936,7 @@ router16.post("/login", async (req, res) => {
     if (!partner.isVerified || partner.status !== "active") {
       return res.status(403).json({ message: "Your account is not yet approved. Please wait for admin verification." });
     }
-    if (!partner.passwordHash || !bcryptjs3.compareSync(password, partner.passwordHash)) {
+    if (!partner.passwordHash || !bcryptjs2.compareSync(password, partner.passwordHash)) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
     req.session.deliveryPartnerId = partner.id;
@@ -5580,7 +5953,7 @@ router16.post("/login", async (req, res) => {
     res.status(500).json({ message: "Login failed" });
   }
 });
-router16.post("/:partnerId/upload-document", async (req, res) => {
+router15.post("/:partnerId/upload-document", async (req, res) => {
   try {
     const { partnerId } = req.params;
     const { docType, fileUrl } = req.body;
@@ -5606,7 +5979,7 @@ router16.post("/:partnerId/upload-document", async (req, res) => {
     res.status(500).json({ message: "Upload failed" });
   }
 });
-router16.post("/assign-orders", async (req, res) => {
+router15.post("/assign-orders", async (req, res) => {
   try {
     const { partnerId, orderIds, zoneFilter } = req.body;
     if (!partnerId || !orderIds || orderIds.length === 0) {
@@ -5641,7 +6014,7 @@ router16.post("/assign-orders", async (req, res) => {
     res.status(500).json({ message: "Assignment failed" });
   }
 });
-router16.get("/earnings/:partnerId", async (req, res) => {
+router15.get("/earnings/:partnerId", async (req, res) => {
   try {
     const { partnerId } = req.params;
     const { period = "today" } = req.query;
@@ -5692,7 +6065,7 @@ router16.get("/earnings/:partnerId", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch earnings" });
   }
 });
-router16.post("/send-credentials/:partnerId", async (req, res) => {
+router15.post("/send-credentials/:partnerId", async (req, res) => {
   try {
     const { partnerId } = req.params;
     const { username, tempPassword, method = "sms" } = req.body;
@@ -5740,7 +6113,7 @@ Divine Naturals Team
     res.status(500).json({ message: "Failed to send notification" });
   }
 });
-router16.get("/me/:partnerId", async (req, res) => {
+router15.get("/me/:partnerId", async (req, res) => {
   try {
     const { partnerId } = req.params;
     const partner = await db.query.deliveryPartners.findFirst({
@@ -5766,7 +6139,7 @@ router16.get("/me/:partnerId", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch profile" });
   }
 });
-router16.get("/today/:partnerId", async (req, res) => {
+router15.get("/today/:partnerId", async (req, res) => {
   try {
     const { partnerId } = req.params;
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
@@ -5802,7 +6175,7 @@ router16.get("/today/:partnerId", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch deliveries" });
   }
 });
-router16.post("/:partnerId/submit-profile", async (req, res) => {
+router15.post("/:partnerId/submit-profile", async (req, res) => {
   try {
     const { partnerId } = req.params;
     if (!partnerId || partnerId === "null" || isNaN(parseInt(partnerId))) {
@@ -5861,7 +6234,7 @@ router16.post("/:partnerId/submit-profile", async (req, res) => {
     res.status(500).json({ message: "Failed to submit profile: " + (error.message || "Unknown error") });
   }
 });
-router16.patch("/start/:assignmentId", async (req, res) => {
+router15.patch("/start/:assignmentId", async (req, res) => {
   try {
     await db.update(deliveryAssignments).set({ status: "picked_up", timeStarted: /* @__PURE__ */ new Date() }).where(eq21(deliveryAssignments.id, parseInt(req.params.assignmentId)));
     res.json({ message: "Delivery started" });
@@ -5869,7 +6242,7 @@ router16.patch("/start/:assignmentId", async (req, res) => {
     res.status(500).json({ message: "Failed to start delivery" });
   }
 });
-router16.patch("/complete/:assignmentId", async (req, res) => {
+router15.patch("/complete/:assignmentId", async (req, res) => {
   try {
     const { proofPhoto } = req.body;
     await db.update(deliveryAssignments).set({ status: "delivered", timeDelivered: /* @__PURE__ */ new Date(), failedPhoto: proofPhoto }).where(eq21(deliveryAssignments.id, parseInt(req.params.assignmentId)));
@@ -5878,7 +6251,7 @@ router16.patch("/complete/:assignmentId", async (req, res) => {
     res.status(500).json({ message: "Failed to complete delivery" });
   }
 });
-router16.patch("/failed/:assignmentId", async (req, res) => {
+router15.patch("/failed/:assignmentId", async (req, res) => {
   try {
     const { reason, photo } = req.body;
     await db.update(deliveryAssignments).set({ status: "failed", failedReason: reason, failedPhoto: photo }).where(eq21(deliveryAssignments.id, parseInt(req.params.assignmentId)));
@@ -5887,7 +6260,7 @@ router16.patch("/failed/:assignmentId", async (req, res) => {
     res.status(500).json({ message: "Failed to mark delivery as failed" });
   }
 });
-router16.patch("/collect-cash/:assignmentId", async (req, res) => {
+router15.patch("/collect-cash/:assignmentId", async (req, res) => {
   try {
     const { amount } = req.body;
     await db.update(deliveryAssignments).set({ collectionStatus: "received", collectedCash: amount }).where(eq21(deliveryAssignments.id, parseInt(req.params.assignmentId)));
@@ -5896,16 +6269,16 @@ router16.patch("/collect-cash/:assignmentId", async (req, res) => {
     res.status(500).json({ message: "Failed to collect cash" });
   }
 });
-var delivery_routes_default = router16;
+var delivery_routes_default = router15;
 
 // server/routes/admin-delivery.routes.ts
 init_db();
 init_schema();
-import { Router as Router17 } from "express";
+import { Router as Router16 } from "express";
 import { eq as eq22, and as and13 } from "drizzle-orm";
-import bcrypt from "bcryptjs";
-var router17 = Router17();
-router17.get("/", async (req, res) => {
+import bcrypt2 from "bcryptjs";
+var router16 = Router16();
+router16.get("/", async (req, res) => {
   try {
     const { zone, status: statusFilter, verified } = req.query;
     const conditions = [];
@@ -5927,7 +6300,7 @@ router17.get("/", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch delivery partners" });
   }
 });
-router17.get("/:id", async (req, res) => {
+router16.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const partner = await db.query.deliveryPartners.findFirst({
@@ -5942,7 +6315,7 @@ router17.get("/:id", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch partner" });
   }
 });
-router17.patch("/:id", async (req, res) => {
+router16.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { zone } = req.body;
@@ -5959,7 +6332,7 @@ router17.patch("/:id", async (req, res) => {
     res.status(500).json({ message: "Failed to update partner" });
   }
 });
-router17.post("/:id/generate-password", async (req, res) => {
+router16.post("/:id/generate-password", async (req, res) => {
   try {
     const { id } = req.params;
     const { tempPassword } = req.body;
@@ -5972,7 +6345,7 @@ router17.post("/:id/generate-password", async (req, res) => {
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
     }
-    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    const hashedPassword = await bcrypt2.hash(tempPassword, 10);
     const username = partner.username || `driver_${partner.phone.replace(/\D/g, "").slice(-6)}`;
     const updatedPartner = await db.update(deliveryPartners).set({
       passwordHash: hashedPassword,
@@ -5992,7 +6365,7 @@ router17.post("/:id/generate-password", async (req, res) => {
     res.status(500).json({ message: "Failed to generate password" });
   }
 });
-router17.post("/", async (req, res) => {
+router16.post("/", async (req, res) => {
   try {
     const { fullName, email, phone, address, zone, vehicleType, licenseNumber, password } = req.body;
     if (!fullName || !phone || !password) {
@@ -6002,7 +6375,7 @@ router17.post("/", async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
     const username = `driver_${phone.replace(/\D/g, "").slice(-6)}`;
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt2.hash(password, 10);
     const newPartner = await db.insert(deliveryPartners).values({
       fullName,
       email,
@@ -6025,7 +6398,7 @@ router17.post("/", async (req, res) => {
     res.status(500).json({ message: "Failed to create partner" });
   }
 });
-router17.patch("/:id/verify", async (req, res) => {
+router16.patch("/:id/verify", async (req, res) => {
   try {
     const { id } = req.params;
     const { action, username, tempPassword } = req.body;
@@ -6042,7 +6415,7 @@ router17.patch("/:id/verify", async (req, res) => {
       if (!tempPassword) {
         return res.status(400).json({ message: "Temporary password required" });
       }
-      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+      const hashedPassword = await bcrypt2.hash(tempPassword, 10);
       const finalUsername = username || `driver_${partner.phone.replace(/\D/g, "").slice(-6)}`;
       const updatedPartner = await db.update(deliveryPartners).set({
         status: "active",
@@ -6063,7 +6436,7 @@ router17.patch("/:id/verify", async (req, res) => {
     res.status(500).json({ message: "Failed to verify partner" });
   }
 });
-router17.patch("/:id/block", async (req, res) => {
+router16.patch("/:id/block", async (req, res) => {
   try {
     const { id } = req.params;
     const { action, reason } = req.body;
@@ -6084,7 +6457,7 @@ router17.patch("/:id/block", async (req, res) => {
     res.status(500).json({ message: "Failed to block/unblock partner" });
   }
 });
-router17.patch("/:id/approve-documents", async (req, res) => {
+router16.patch("/:id/approve-documents", async (req, res) => {
   try {
     const { id } = req.params;
     const { remarks } = req.body;
@@ -6107,7 +6480,7 @@ router17.patch("/:id/approve-documents", async (req, res) => {
     res.status(500).json({ message: "Failed to approve documents" });
   }
 });
-router17.patch("/:id/reject-documents", async (req, res) => {
+router16.patch("/:id/reject-documents", async (req, res) => {
   try {
     const { id } = req.params;
     const { remarks } = req.body;
@@ -6133,7 +6506,7 @@ router17.patch("/:id/reject-documents", async (req, res) => {
     res.status(500).json({ message: "Failed to reject documents" });
   }
 });
-router17.delete("/:id", async (req, res) => {
+router16.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const deleted = await db.update(deliveryPartners).set({ status: "rejected" }).where(eq22(deliveryPartners.id, parseInt(id))).returning();
@@ -6143,17 +6516,19 @@ router17.delete("/:id", async (req, res) => {
     res.status(500).json({ message: "Failed to delete partner" });
   }
 });
-var admin_delivery_routes_default = router17;
+var admin_delivery_routes_default = router16;
 
 // server/index.ts
 var app = express2();
 app.use(express2.json({ limit: "50mb" }));
 app.use(express2.urlencoded({ extended: false, limit: "50mb" }));
 app.use(fileUpload());
-app.use("/banners", express2.static(path3.join(process.cwd(), "public", "banners")));
+app.use("/banners", express2.static(path4.join(process.cwd(), "public", "banners")));
+app.use("/products", express2.static(path4.join(process.cwd(), "public", "products")));
+app.use("/icons", express2.static(path4.join(process.cwd(), "public", "icons")));
 app.use((req, res, next) => {
   const start = Date.now();
-  const path4 = req.path;
+  const path5 = req.path;
   let capturedJsonResponse = void 0;
   const originalResJson = res.json;
   res.json = function(bodyJson, ...args) {
@@ -6162,8 +6537,8 @@ app.use((req, res, next) => {
   };
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path4.startsWith("/api")) {
-      let logLine = `${req.method} ${path4} ${res.statusCode} in ${duration}ms`;
+    if (path5.startsWith("/api")) {
+      let logLine = `${req.method} ${path5} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
@@ -6207,8 +6582,7 @@ app.use((req, res, next) => {
   const port = parseInt(process.env.PORT || "5000", 10);
   server.listen({
     port,
-    host: "0.0.0.0",
-    reusePort: true
+    host: "0.0.0.0"
   }, () => {
     log(`serving on port ${port}`);
   });

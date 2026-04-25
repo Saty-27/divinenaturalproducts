@@ -70,75 +70,55 @@ export async function seedDatabase() {
         status: "active"
       });
 
-      // Insert products
-      const baseProducts = [
-        {
-          name: "Fresh Farm Milk",
-          description: "Raw, unprocessed A2 Gir Cow milk delivered within 4 hours of milking.",
-          price: "90",
-          unit: "Litre",
-          stock: 500,
-          category: "Milk",
-          type: "MILK",
-          imageUrl: "/images/products/milk.png",
-          sku: "DAIRY-MILK-001"
-        },
-        {
-          name: "Natural Desi Ghee",
-          description: "Traditional bilona method ghee made from cultured butter.",
-          price: "1200",
-          unit: "500ml",
-          stock: 100,
-          category: "Ghee",
-          type: "DAIRY",
-          imageUrl: "/images/products/ghee.png",
-          sku: "DAIRY-GHEE-001"
-        },
-        {
-          name: "Pure Cow Curd",
-          description: "Thick, creamy curd made from whole milk without any thickeners.",
-          price: "60",
-          unit: "500g",
-          stock: 200,
-          category: "Curd",
-          type: "DAIRY",
-          imageUrl: "/images/products/curd.png",
-          sku: "DAIRY-CURD-001"
-        },
-        {
-          name: "Traditional Paneer",
-          description: "Soft, handmade malai paneer with no preservatives.",
-          price: "110",
-          unit: "200g",
-          stock: 150,
-          category: "Paneer",
-          type: "DAIRY",
-          imageUrl: "/images/products/paneer.png",
-          sku: "DAIRY-PANEER-001"
-        },
-        {
-          name: "Buttermilk",
-          description: "Refreshing spiced chaas made from cultured curd.",
-          price: "35",
-          unit: "500ml",
-          stock: 300,
-          category: "Beverages",
-          type: "DAIRY",
-          imageUrl: "/images/products/buttermilk.png",
-          sku: "DAIRY-BM-001"
-        }
-      ];
-
-      for (const p of baseProducts) {
-        const [existing] = await db.select().from(products).where(eq(products.sku, p.sku));
-        if (existing) {
-          await db.update(products).set(p).where(eq(products.sku, p.sku));
-        } else {
-          await db.insert(products).values(p);
-        }
-      }
-      console.log("✓ Inserted/Updated Base Data (Users, Products)");
+      console.log("✓ Inserted/Updated Base Data (Users)");
     }
+
+    // ALWAYS update products to sync with latest seed data
+    const baseProducts = [
+      {
+        name: "Cold Pressed Coconut Oil",
+        description: "Pure, edible grade cold pressed coconut oil. Multi-purpose oil with a fresh coconut aroma and superior quality.",
+        price: "380",
+        unit: "500ml",
+        stock: 100,
+        category: "Oil",
+        type: "DAIRY",
+        imageUrl: "/products/coconut_oil.png",
+        sku: "OIL-COCO-001"
+      },
+      {
+        name: "Cold Pressed Groundnut Oil",
+        description: "Pure and aromatic cold pressed groundnut oil. Extracted using traditional wooden ghani methods to retain nutrients and natural flavor.",
+        price: "280",
+        unit: "1L",
+        stock: 150,
+        category: "Oil",
+        type: "DAIRY",
+        imageUrl: "/products/groundnut_oil.png",
+        sku: "OIL-GNUT-001"
+      },
+      {
+        name: "Buttermilk",
+        description: "Refreshing traditional buttermilk",
+        price: "25",
+        unit: "500ml",
+        stock: 300,
+        category: "Beverages",
+        type: "DAIRY",
+        imageUrl: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=800",
+        sku: "DAIRY-BMLK-001"
+      }
+    ];
+
+    for (const p of baseProducts) {
+      const [existing] = await db.select().from(products).where(eq(products.sku, p.sku));
+      if (existing) {
+        await db.update(products).set(p).where(eq(products.sku, p.sku));
+      } else {
+        await db.insert(products).values(p);
+      }
+    }
+    console.log("✓ Updated Products from seed data");
 
     // =========================================================================
     // REFRESH CMS CONTENT
@@ -150,10 +130,10 @@ export async function seedDatabase() {
     await db.insert(banners).values([
       {
         title: "Pure. Fresh. From Our Farm to Your Home.",
-        subtitle: "Experience the authentic taste of raw A2 Gir Cow milk, delivered directly to your doorstep in Mumbai every morning.",
-        imageUrl: "/images/hero/hero_banner_1.png",
-        imageUrlTablet: "/images/hero/hero_banner_1.png",
-        imageUrlMobile: "/images/hero/hero_banner_1.png",
+        subtitle: "Experience the authentic taste of raw A2 Gir Cow milk, delivered directly to your doorstep every morning.",
+        imageUrl: "/banners/farm_milk_bottles_pastoral_scene.png",
+        imageUrlTablet: "/banners/farm_milk_bottles_pastoral_scene.png",
+        imageUrlMobile: "/banners/farm_milk_bottles_pastoral_scene.png",
         ctaText: "Start Subscription",
         ctaLink: "/shop",
         displayOrder: 1,
@@ -162,9 +142,9 @@ export async function seedDatabase() {
       {
         title: "Unmatched Delivery. Consistent Quality.",
         subtitle: "At Divine Naturals, we take pride in our 4:00 AM delivery promise. Freshness that doesn't wait.",
-        imageUrl: "/images/hero/hero_banner_2.png",
-        imageUrlTablet: "/images/hero/hero_banner_2.png",
-        imageUrlMobile: "/images/hero/hero_banner_2.png",
+        imageUrl: "/banners/fresh_milk_pour_splash_banner.png",
+        imageUrlTablet: "/banners/fresh_milk_pour_splash_banner.png",
+        imageUrlMobile: "/banners/fresh_milk_pour_splash_banner.png",
         ctaText: "View Products",
         ctaLink: "/shop",
         displayOrder: 2,
@@ -173,9 +153,9 @@ export async function seedDatabase() {
       {
         title: "Traditional Goodness, Modern Safety.",
         subtitle: "We use the traditional Bilona method for Ghee and state-of-the-art testing for every batch of milk.",
-        imageUrl: "/images/hero/hero_banner_3.png",
-        imageUrlTablet: "/images/hero/hero_banner_3.png",
-        imageUrlMobile: "/images/hero/hero_banner_3.png",
+        imageUrl: "/banners/premium_dairy_products_showcase.png",
+        imageUrlTablet: "/banners/premium_dairy_products_showcase.png",
+        imageUrlMobile: "/banners/premium_dairy_products_showcase.png",
         ctaText: "Learn About Us",
         ctaLink: "/about",
         displayOrder: 3,

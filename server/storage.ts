@@ -40,6 +40,7 @@ export interface IStorage {
   // User operations - mandatory for Replit Auth
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUser(id: string, user: Partial<User>): Promise<User>;
   
   // Category operations
   getCategories(): Promise<Category[]>;
@@ -58,6 +59,9 @@ export interface IStorage {
   getOrderById(id: number): Promise<Order | undefined>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
+  decrementProductStock(productId: number, quantity: number): Promise<void>;
+  updateVendorRequirement(vendorId: number, liters: number): Promise<void>;
+  recordStockMovement(movement: any): Promise<void>;
   getOrdersForDelivery(deliveryPartnerId: number): Promise<Order[]>;
   
   // Order items operations
@@ -137,6 +141,8 @@ export interface IStorage {
   updateContactSettings(settings: any): Promise<any>;
   updateTermsOfServiceSettings(settings: any): Promise<any>;
   updatePrivacyPolicySettings(settings: any): Promise<any>;
+  getSiteSettings(): Promise<any | null>;
+  updateSiteSettings(settings: any): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -158,6 +164,22 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
+    return user;
+  }
+
+  async updateUser(id: string, userData: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...userData,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+      
+    if (!user) {
+      throw new Error("User not found");
+    }
     return user;
   }
 
@@ -252,11 +274,68 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOrderStatus(id: number, status: string): Promise<Order> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    
     const [updatedOrder] = await db.update(orders)
       .set({ status })
       .where(eq(orders.id, id))
       .returning();
+
+    // If status changed to DELIVERED, decrement stock for each item
+    // We check if it wasn't already delivered to avoid double counting
+    if (status.toUpperCase() === 'DELIVERED' && order && order.status.toUpperCase() !== 'DELIVERED') {
+      const items = await this.getOrderItemsByOrder(id);
+      for (const item of items) {
+        await this.decrementProductStock(item.productId, item.quantity);
+        
+        // Record movement
+        await this.recordStockMovement({
+          productId: item.productId,
+          type: 'OUT',
+          reason: 'ORDER_DELIVERED',
+          quantity: item.quantity,
+          previousStock: 0, // Would need more queries to get exact
+          newStock: 0,
+          notes: `Order #${id} delivered`
+        });
+      }
+    }
+    
     return updatedOrder;
+  }
+
+  async decrementProductStock(productId: number, quantity: number): Promise<void> {
+    const [product] = await db.select().from(products).where(eq(products.id, productId));
+    if (product) {
+      const newStock = Math.max(0, (product.stock || 0) - quantity);
+      await db.update(products)
+        .set({ stock: newStock })
+        .where(eq(products.id, productId));
+    }
+  }
+
+  async updateVendorRequirement(vendorId: number, liters: number): Promise<void> {
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.id, vendorId));
+    if (vendor) {
+      const currentCirculated = vendor.circulatedLiters || 0;
+      const currentRequirement = vendor.requirementToday || 0;
+      
+      const newCirculated = currentCirculated + liters;
+      const newRequirement = Math.max(0, currentRequirement - liters);
+      
+      await db.update(vendors)
+        .set({ 
+          circulatedLiters: newCirculated,
+          requirementToday: newRequirement
+        })
+        .where(eq(vendors.id, vendorId));
+    }
+  }
+
+  async recordStockMovement(movement: any): Promise<void> {
+    // For now, log to console as the table doesn't exist in schema
+    // In a real app, this would insert into a stock_movements table
+    console.log("📦 Stock Movement Recorded:", movement);
   }
 
   async getOrdersForDelivery(deliveryPartnerId: number): Promise<Order[]> {
@@ -743,6 +822,24 @@ export class DatabaseStorage implements IStorage {
       return updated;
     } else {
       const [created] = await db.insert(privacyPolicySettings).values(settingsData).returning();
+      return created;
+    }
+  }
+
+  async getSiteSettings(): Promise<any | null> {
+    const { siteSettings } = await import("@shared/schema");
+    const [settings] = await db.select().from(siteSettings).limit(1);
+    return settings || null;
+  }
+
+  async updateSiteSettings(settingsData: any): Promise<any> {
+    const { siteSettings } = await import("@shared/schema");
+    const existing = await this.getSiteSettings();
+    if (existing) {
+      const [updated] = await db.update(siteSettings).set({ ...settingsData, updatedAt: new Date() }).where(eq(siteSettings.id, existing.id)).returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(siteSettings).values(settingsData).returning();
       return created;
     }
   }

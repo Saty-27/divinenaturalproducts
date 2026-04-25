@@ -25,16 +25,13 @@ sudo -u postgres psql -c "CREATE DATABASE divine_naturals;" || echo "Database al
 sudo -u postgres psql -c "CREATE USER divine_admin WITH PASSWORD 'Divine@2025';" || echo "User already exists"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE divine_naturals TO divine_admin;"
 
-# 4. Clone or update repository
-if [ -d "divine-naturals" ]; then
+# 4. Update repository (if in a git repo)
+if [ -d ".git" ]; then
     echo "📂 Updating existing repository..."
-    cd divine-naturals
     git pull
 else
     echo "📂 Cloning repository..."
-    # Replace the link below with your actual git repository URL
-    git clone https://github.com/your-username/divine-naturals.git
-    cd divine-naturals
+    git clone https://github.com/Saty-27/DeployDivenenaturals.git .
 fi
 
 # 5. Install Project Dependencies
@@ -61,8 +58,9 @@ npm run db:push
 # 8. Setup Process Manager (PM2)
 echo "🔋 Starting application with PM2..."
 sudo npm install -g pm2
-pm2 stop divine-naturals || true
-pm2 start dist/index.js --name "divine-naturals"
+APP_NAME=$(basename $(pwd))
+pm2 stop "$APP_NAME" || true
+pm2 start dist/index.js --name "$APP_NAME"
 pm2 save
 pm2 startup
 

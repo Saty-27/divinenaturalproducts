@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Phone, Mail, MapPin, Facebook, Instagram, Twitter, MessageCircle, Globe } from "lucide-react";
 import logoImage from "@assets/WhatsApp Image 2025-08-07 at 16.06.46_1755865958874.jpg";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const defaultFooterLinks = [
   {
@@ -55,6 +56,7 @@ const platformColors: Record<string, string> = {
 };
 
 export default function SiteFooter() {
+  const { settings: siteSettings } = useSiteSettings();
   const { data: settings = defaultSettings } = useQuery({
     queryKey: ["/api/homepage/footer/public"],
     queryFn: async () => {
@@ -77,6 +79,9 @@ export default function SiteFooter() {
   const socialLinks = parseJSON(settings.socialLinks, defaultSettings.socialLinks);
   const footerSections = parseJSON(settings.footerLinks, defaultSettings.footerLinks);
 
+  const brandName = siteSettings.brandName || settings.companyName;
+  const logoUrl = siteSettings.logoUrl || logoImage;
+
   return (
     <footer className="bg-gray-900 border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -85,13 +90,13 @@ export default function SiteFooter() {
             <Link href="/" className="inline-flex items-center gap-3 mb-6 group">
               <div className="w-11 h-11 bg-white rounded-full flex items-center justify-center overflow-hidden p-1.5 ring-2 ring-gray-800 group-hover:ring-green-500 transition-all duration-300">
                 <img 
-                  src={logoImage} 
-                  alt={settings.companyName} 
+                  src={logoUrl} 
+                  alt={brandName} 
                   className="w-full h-full object-contain"
                 />
               </div>
               <div>
-                <span className="text-xl font-bold text-white tracking-tight">{settings.companyName}</span>
+                <span className="text-xl font-bold text-white tracking-tight">{brandName}</span>
                 <p className="text-xs text-green-500 font-medium tracking-wide uppercase">{settings.tagline}</p>
               </div>
             </Link>
@@ -146,7 +151,7 @@ export default function SiteFooter() {
         <div className="border-t border-gray-800 py-8 mt-4">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
             <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">
-              {settings.copyrightText}
+              © {new Date().getFullYear()} {brandName}. All rights reserved.
             </p>
             <div className="flex items-center gap-4">
               {Array.isArray(socialLinks) && socialLinks.map((social: any, idx: number) => {

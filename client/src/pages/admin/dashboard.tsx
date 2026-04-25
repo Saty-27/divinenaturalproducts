@@ -61,6 +61,8 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/admin-layout";
 import { useLocation } from "wouter";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import logoImage from "@assets/WhatsApp Image 2025-08-07 at 16.06.46_1755865958874.jpg";
 import { CalendarWidget } from "@/components/ui/calendar-widget";
 import { RevenueChart, OrdersChart, ProductDistributionChart, DeliveryPerformanceChart } from "@/components/charts/sales-charts";
 import { DataTable } from "@/components/ui/data-table";
@@ -69,6 +71,7 @@ import { RecentOrdersTable } from "@/components/dashboard/recent-orders-table";
 
 // Today's Requirements Panel Component
 function TodaysRequirementsPanel() {
+  const { settings } = useSiteSettings();
   interface Requirement {
     productId: number;
     productName: string;
@@ -99,10 +102,14 @@ function TodaysRequirementsPanel() {
           <div className="flex justify-between items-center">
             <div>
               <p className="font-bold text-blue-800 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Milk className="w-5 h-5 text-blue-600" />
+                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-1 shadow-sm">
+                  <img 
+                    src={settings.logoUrl || logoImage} 
+                    alt={settings.brandName} 
+                    className="w-full h-full object-contain"
+                  />
                 </div>
-                Total Milk Required Today
+                Total {settings.brandName} Required Today
               </p>
               <p className="text-sm text-blue-600">All active subscriptions</p>
             </div>
@@ -176,6 +183,7 @@ function TodaysRequirementsPanel() {
 export default function AdminDashboard() {
   const [location] = useLocation();
   const { toast } = useToast();
+  const { settings } = useSiteSettings();
   const [searchTerm, setSearchTerm] = useState("");
   
   // Get current date and time
@@ -400,6 +408,7 @@ export default function AdminDashboard() {
 // Enhanced Dashboard Overview Content with Comprehensive Analytics
 function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, weeklyRevenue, monthlyRevenue, totalMilkUnits, newCustomersThisWeek, vendors, deliveryPartners, customers, orders, products }: any) {
   const [showTodayCustomers, setShowTodayCustomers] = useState(false);
+  const { settings } = useSiteSettings();
   
   const totalVendors = Array.isArray(vendors) ? vendors.length : 0;
   const totalDeliveryPartners = Array.isArray(deliveryPartners) ? deliveryPartners.length : 0;
@@ -438,10 +447,14 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
         <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-[hsl(var(--eco-secondary))] flex items-center justify-between text-lg sm:text-xl font-black">
             <span className="flex items-center">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center mr-3 shadow-inner">
-                <Milk className="w-6 h-6 text-emerald-600" />
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center mr-3 shadow-inner p-1">
+                <img 
+                  src={settings.logoUrl || logoImage} 
+                  alt={settings.brandName} 
+                  className="w-full h-full object-contain"
+                />
               </div>
-              Today's Milk Requirements
+              Today's {settings.brandName} Requirements
             </span>
             <span className={`text-sm transition-transform ${showTodayCustomers ? 'rotate-180' : ''}`}>▼</span>
           </CardTitle>

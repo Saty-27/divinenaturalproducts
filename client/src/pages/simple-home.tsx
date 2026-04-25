@@ -1,8 +1,14 @@
-import { Milk, CheckCircle2 } from "lucide-react";
+import { Milk } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { type User } from "@shared/schema";
 
 export default function HomePage() {
   const { user, isLoading } = useAuth() as { user?: User; isLoading: boolean };
   const { toast } = useToast();
+  const { settings } = useSiteSettings();
 
   const handleLogout = async () => {
     try {
@@ -30,10 +36,14 @@ export default function HomePage() {
       <div className="max-w-md mx-auto p-4">
         {/* Header */}
         <div className="text-center py-10">
-          <div className="mx-auto w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-6 transform rotate-3">
-            <Milk className="w-12 h-12 text-emerald-600" />
+          <div className="mx-auto w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-6 transform rotate-3 overflow-hidden p-2">
+            {settings.logoUrl ? (
+              <img src={settings.logoUrl} alt={settings.brandName} className="w-full h-full object-contain" />
+            ) : (
+              <Milk className="w-12 h-12 text-emerald-600" />
+            )}
           </div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Divine Naturals</h1>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">{settings.brandName}</h1>
           <p className="text-emerald-600 font-bold uppercase tracking-widest text-xs mt-2">Premium Dairy Delivery</p>
         </div>
 
