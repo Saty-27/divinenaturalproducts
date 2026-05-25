@@ -6,7 +6,8 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import MainPageLayout from "@/components/layout/main-page-layout";
-import { ShoppingCart, ShoppingBag, Package, Calendar, Phone, Star, CreditCard } from "lucide-react";
+import { ShoppingCart, ShoppingBag, Package, Calendar, Phone, Star, CreditCard, Loader2 } from "lucide-react";
+
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import logoImage from "@assets/WhatsApp Image 2025-08-07 at 16.06.46_1755865958874.jpg";
 
@@ -96,9 +97,15 @@ export default function HomePage() {
   const { settings } = useSiteSettings();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<"overview" | "profile">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "profile" | "security">("overview");
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState<User>(user || {});
+  
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passLoading, setPassLoading] = useState(false);
+
 
   // Fetch current user data is handled by useAuth
   const queryClient = useQueryClient();
@@ -156,6 +163,58 @@ export default function HomePage() {
       });
     }
   };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "New password must be at least 6 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPassLoading(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "✅ Password changed successfully!" });
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        toast({
+          title: "Error",
+          description: data.message || "Failed to change password",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to connect to server",
+        variant: "destructive",
+      });
+    } finally {
+      setPassLoading(false);
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -232,6 +291,24 @@ export default function HomePage() {
                 }`}
               >
                 Profile
+              </button>
+              <button
+                onClick={() => setActiveTab("security")}
+                className={`px-3 sm:px-4 py-2 font-bold text-sm sm:text-base transition-all ${
+                  activeTab === "security"
+                    ? "text-green-600 border-b-2 border-green-600"
+                    : "text-gray-600"
+                }`}
+              >
+                Security
+              </button>
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new Event("open-chatbot"));
+                }}
+                className="px-3 sm:px-4 py-2 font-bold text-sm sm:text-base text-gray-600 hover:text-green-650 border-b-2 border-transparent hover:border-green-300"
+              >
+                Chat Support
               </button>
               <button
                 onClick={() => setLocation("/billing")}
@@ -387,6 +464,62 @@ export default function HomePage() {
                 )}
               </div>
             )}
+
+            {/* Security Tab - Change Password */}
+            {activeTab === "security" && (
+              <div className="max-w-md space-y-4 py-2">
+                <h3 className="font-bold text-lg text-gray-900 mb-2">Change Password</h3>
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Current Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      disabled={passLoading}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      disabled={passLoading}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={passLoading}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={passLoading || !currentPassword || !newPassword || !confirmPassword}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2 rounded text-sm flex items-center gap-2"
+                  >
+                    {passLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Update Password
+                  </Button>
+                </form>
+              </div>
+            )}
           </div>
 
 
@@ -437,13 +570,18 @@ export default function HomePage() {
               <p className="text-gray-600 text-sm mt-1">Daily milk delivery to your door</p>
             </button>
 
-            <div className="bg-white rounded-2xl shadow-sm p-6 group border border-gray-100">
+            <button
+              onClick={() => {
+                window.dispatchEvent(new Event("open-chatbot"));
+              }}
+              className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-all text-left group border border-gray-100 w-full"
+            >
               <div className="mb-4 p-3 bg-red-50 rounded-xl w-fit group-hover:bg-red-100 transition-colors">
                 <Phone className="w-8 h-8 text-red-600" />
               </div>
-              <h3 className="font-bold text-lg text-gray-900">Support</h3>
-              <p className="text-gray-600 text-sm mt-1">Call us at 1-800-DAIRY</p>
-            </div>
+              <h3 className="font-bold text-lg text-gray-900">Chat Support</h3>
+              <p className="text-gray-600 text-sm mt-1">Click to chat with us / 1-800-DAIRY</p>
+            </button>
           </div>
         </div>
       </div>

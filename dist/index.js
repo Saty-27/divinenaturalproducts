@@ -26,13 +26,17 @@ __export(schema_exports, {
   banners: () => banners,
   bills: () => bills,
   billsRelations: () => billsRelations,
+  blogs: () => blogs,
   cart: () => cart,
   cartItems: () => cartItems,
   cartItemsRelations: () => cartItemsRelations,
   cartRelations: () => cartRelations,
   categories: () => categories,
+  chatMessages: () => chatMessages,
+  chatThreads: () => chatThreads,
   contactSettings: () => contactSettings,
   contactSubmissions: () => contactSubmissions,
+  coupons: () => coupons,
   customerActivityLogs: () => customerActivityLogs,
   delegationLogs: () => delegationLogs,
   deliveryAssignments: () => deliveryAssignments,
@@ -41,29 +45,41 @@ __export(schema_exports, {
   drivers: () => drivers,
   driversRelations: () => driversRelations,
   ethosCards: () => ethosCards,
-  faqs: () => faqs2,
+  faqs: () => faqs,
   footerSettings: () => footerSettings,
   homepageSections: () => homepageSections,
+  imageGallery: () => imageGallery,
   insertAddressSchema: () => insertAddressSchema,
   insertAdminCustomerNoteSchema: () => insertAdminCustomerNoteSchema,
   insertBannerSchema: () => insertBannerSchema,
+  insertBlogSchema: () => insertBlogSchema,
+  insertChatMessageSchema: () => insertChatMessageSchema,
+  insertChatThreadSchema: () => insertChatThreadSchema,
   insertContactSubmissionSchema: () => insertContactSubmissionSchema,
   insertCustomerActivityLogSchema: () => insertCustomerActivityLogSchema,
   insertHomepageSectionSchema: () => insertHomepageSectionSchema,
+  insertImageGallerySchema: () => insertImageGallerySchema,
   insertMilkSubscriptionSchema: () => insertMilkSubscriptionSchema,
   insertOrderSchema: () => insertOrderSchema,
+  insertPasswordResetRequestSchema: () => insertPasswordResetRequestSchema,
+  insertPasswordResetTokenSchema: () => insertPasswordResetTokenSchema,
   insertProductSchema: () => insertProductSchema,
   insertSiteSettingsSchema: () => insertSiteSettingsSchema,
   insertSubscriptionSchema: () => insertSubscriptionSchema,
   insertSupportTicketSchema: () => insertSupportTicketSchema,
   insertTicketMessageSchema: () => insertTicketMessageSchema,
+  insertVideoBlogSchema: () => insertVideoBlogSchema,
+  insertVideoGallerySchema: () => insertVideoGallerySchema,
   milkSubscriptions: () => milkSubscriptions,
   newsletterSettings: () => newsletterSettings,
   notifications: () => notifications,
+  offers: () => offers,
   orderItems: () => orderItems,
   orderItemsRelations: () => orderItemsRelations,
   orders: () => orders,
   ordersRelations: () => ordersRelations,
+  passwordResetRequests: () => passwordResetRequests,
+  passwordResetTokens: () => passwordResetTokens,
   privacyPolicySettings: () => privacyPolicySettings,
   productDeals: () => productDeals,
   productVendors: () => productVendors,
@@ -78,9 +94,11 @@ __export(schema_exports, {
   supportTickets: () => supportTickets,
   termsOfServiceSettings: () => termsOfServiceSettings,
   ticketMessages: () => ticketMessages,
-  users: () => users2,
+  users: () => users,
   vendors: () => vendors,
-  vendorsRelations: () => vendorsRelations
+  vendorsRelations: () => vendorsRelations,
+  videoBlogs: () => videoBlogs,
+  videoGallery: () => videoGallery
 });
 import {
   pgTable,
@@ -97,7 +115,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
-var sessions, users2, categories, products, vendors, deliveryPartners, deliveryAssignments, drivers, admins, delegationLogs, orders, orderItems, milkSubscriptions, subscriptionDeliveries, cart, cartItems, addresses, supportTickets, ticketMessages, adminCustomerNotes, customerActivityLogs, productVendors, notifications, bills, subscriptionsRelations, subscriptionDeliveriesRelations, ordersRelations, orderItemsRelations, vendorsRelations, deliveryPartnersRelations, driversRelations, adminsRelations, cartRelations, cartItemsRelations, addressesRelations, productVendorsRelations, billsRelations, banners, homepageSections, ethosCards, productDeals, statsCounters, faqs2, newsletterSettings, footerSettings, aboutUsSettings, contactSettings, termsOfServiceSettings, privacyPolicySettings, siteSettings, contactSubmissions, insertAddressSchema, insertOrderSchema, insertSubscriptionSchema, insertMilkSubscriptionSchema, insertSupportTicketSchema, insertTicketMessageSchema, insertAdminCustomerNoteSchema, insertCustomerActivityLogSchema, insertProductSchema, insertBannerSchema, insertHomepageSectionSchema, insertContactSubmissionSchema, insertSiteSettingsSchema;
+var sessions, users, categories, products, vendors, deliveryPartners, deliveryAssignments, drivers, admins, delegationLogs, orders, orderItems, milkSubscriptions, subscriptionDeliveries, cart, cartItems, addresses, supportTickets, ticketMessages, adminCustomerNotes, customerActivityLogs, productVendors, notifications, bills, subscriptionsRelations, subscriptionDeliveriesRelations, ordersRelations, orderItemsRelations, vendorsRelations, deliveryPartnersRelations, driversRelations, adminsRelations, cartRelations, cartItemsRelations, addressesRelations, productVendorsRelations, billsRelations, banners, homepageSections, ethosCards, productDeals, statsCounters, faqs, newsletterSettings, footerSettings, aboutUsSettings, contactSettings, termsOfServiceSettings, privacyPolicySettings, siteSettings, contactSubmissions, insertAddressSchema, insertOrderSchema, insertSubscriptionSchema, insertMilkSubscriptionSchema, insertSupportTicketSchema, insertTicketMessageSchema, insertAdminCustomerNoteSchema, insertCustomerActivityLogSchema, insertProductSchema, insertBannerSchema, insertHomepageSectionSchema, insertContactSubmissionSchema, insertSiteSettingsSchema, offers, coupons, blogs, videoBlogs, imageGallery, videoGallery, insertBlogSchema, insertVideoBlogSchema, insertImageGallerySchema, insertVideoGallerySchema, passwordResetRequests, passwordResetTokens, chatThreads, chatMessages, insertPasswordResetRequestSchema, insertPasswordResetTokenSchema, insertChatThreadSchema, insertChatMessageSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -110,7 +128,7 @@ var init_schema = __esm({
       },
       (table) => [index("IDX_session_expire").on(table.expire)]
     );
-    users2 = pgTable("users", {
+    users = pgTable("users", {
       id: varchar("id").primaryKey().notNull(),
       email: varchar("email").unique(),
       passwordHash: varchar("password_hash"),
@@ -128,6 +146,7 @@ var init_schema = __esm({
       // customer, admin, vendor, delivery, marketing_staff
       isActive: boolean("is_active").default(true),
       walletBalance: decimal("wallet_balance", { precision: 10, scale: 2 }).default("0"),
+      lastLogin: timestamp("last_login"),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
     });
@@ -167,7 +186,7 @@ var init_schema = __esm({
     });
     vendors = pgTable("vendors", {
       id: serial("id").primaryKey(),
-      userId: varchar("user_id").references(() => users2.id),
+      userId: varchar("user_id").references(() => users.id),
       businessName: varchar("business_name").notNull(),
       licenseNumber: varchar("license_number"),
       locationName: varchar("location_name").notNull(),
@@ -195,7 +214,7 @@ var init_schema = __esm({
     });
     deliveryPartners = pgTable("delivery_partners", {
       id: serial("id").primaryKey(),
-      userId: varchar("user_id").references(() => users2.id),
+      userId: varchar("user_id").references(() => users.id),
       fullName: varchar("full_name").notNull(),
       email: varchar("email"),
       phone: varchar("phone").notNull().unique(),
@@ -249,7 +268,7 @@ var init_schema = __esm({
     });
     admins = pgTable("admins", {
       id: serial("id").primaryKey(),
-      userId: varchar("user_id").references(() => users2.id).notNull(),
+      userId: varchar("user_id").references(() => users.id).notNull(),
       name: varchar("name").notNull(),
       phone: varchar("phone").notNull(),
       role: varchar("role").notNull(),
@@ -258,7 +277,7 @@ var init_schema = __esm({
       // array of location strings
       permissions: jsonb("permissions").notNull(),
       // permission flags object
-      createdByUserId: varchar("created_by_user_id").references(() => users2.id),
+      createdByUserId: varchar("created_by_user_id").references(() => users.id),
       createdAt: timestamp("created_at").defaultNow()
     });
     delegationLogs = pgTable("delegation_logs", {
@@ -273,7 +292,7 @@ var init_schema = __esm({
     });
     orders = pgTable("orders", {
       id: serial("id").primaryKey(),
-      userId: varchar("user_id").references(() => users2.id),
+      userId: varchar("user_id").references(() => users.id),
       vendorId: integer("vendor_id").references(() => vendors.id),
       deliveryPartnerId: integer("delivery_partner_id").references(() => deliveryPartners.id),
       totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
@@ -306,7 +325,7 @@ var init_schema = __esm({
     });
     milkSubscriptions = pgTable("milk_subscriptions", {
       id: serial("id").primaryKey(),
-      userId: varchar("user_id").references(() => users2.id),
+      userId: varchar("user_id").references(() => users.id),
       productId: integer("product_id").references(() => products.id),
       quantity: integer("quantity").notNull(),
       frequency: varchar("frequency").notNull(),
@@ -323,16 +342,18 @@ var init_schema = __esm({
     subscriptionDeliveries = pgTable("subscription_deliveries", {
       id: serial("id").primaryKey(),
       subscriptionId: integer("subscription_id").references(() => milkSubscriptions.id),
-      userId: varchar("user_id").references(() => users2.id),
+      userId: varchar("user_id").references(() => users.id),
       deliveryDate: date("delivery_date"),
       quantity: integer("quantity"),
       status: varchar("status").default("pending"),
       // pending, delivered, missed, cancelled
+      confirmedByUser: boolean("confirmed_by_user").default(false),
+      confirmedAt: timestamp("confirmed_at"),
       createdAt: timestamp("created_at").defaultNow()
     });
     cart = pgTable("cart", {
       id: serial("id").primaryKey(),
-      userId: varchar("user_id").references(() => users2.id).unique(),
+      userId: varchar("user_id").references(() => users.id).unique(),
       createdAt: timestamp("created_at").defaultNow()
     });
     cartItems = pgTable("cart_items", {
@@ -345,7 +366,7 @@ var init_schema = __esm({
     });
     addresses = pgTable("addresses", {
       id: serial("id").primaryKey(),
-      userId: varchar("user_id").references(() => users2.id),
+      userId: varchar("user_id").references(() => users.id),
       type: varchar("type").notNull(),
       // home, work, other
       address: text("address").notNull(),
@@ -359,7 +380,7 @@ var init_schema = __esm({
     });
     supportTickets = pgTable("support_tickets", {
       id: serial("id").primaryKey(),
-      userId: varchar("user_id").references(() => users2.id),
+      userId: varchar("user_id").references(() => users.id),
       subject: varchar("subject").notNull(),
       description: text("description").notNull(),
       status: varchar("status").default("open"),
@@ -374,27 +395,27 @@ var init_schema = __esm({
     ticketMessages = pgTable("ticket_messages", {
       id: serial("id").primaryKey(),
       ticketId: integer("ticket_id").references(() => supportTickets.id),
-      userId: varchar("user_id").references(() => users2.id),
+      userId: varchar("user_id").references(() => users.id),
       message: text("message").notNull(),
       createdAt: timestamp("created_at").defaultNow()
     });
     adminCustomerNotes = pgTable("admin_customer_notes", {
       id: serial("id").primaryKey(),
-      customerId: varchar("customer_id").references(() => users2.id).notNull(),
+      customerId: varchar("customer_id").references(() => users.id).notNull(),
       noteText: text("note_text").notNull(),
-      addedByAdminId: varchar("added_by_admin_id").references(() => users2.id),
+      addedByAdminId: varchar("added_by_admin_id").references(() => users.id),
       addedByAdminName: varchar("added_by_admin_name"),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
     });
     customerActivityLogs = pgTable("customer_activity_logs", {
       id: serial("id").primaryKey(),
-      customerId: varchar("customer_id").references(() => users2.id).notNull(),
+      customerId: varchar("customer_id").references(() => users.id).notNull(),
       type: varchar("type").notNull(),
       title: varchar("title").notNull(),
       description: text("description"),
       metadata: jsonb("metadata"),
-      actorId: varchar("actor_id").references(() => users2.id),
+      actorId: varchar("actor_id").references(() => users.id),
       actorName: varchar("actor_name"),
       createdAt: timestamp("created_at").defaultNow()
     });
@@ -406,7 +427,7 @@ var init_schema = __esm({
     });
     notifications = pgTable("notifications", {
       id: serial("id").primaryKey(),
-      userId: varchar("user_id").references(() => users2.id),
+      userId: varchar("user_id").references(() => users.id),
       type: varchar("type").notNull(),
       // order, subscription, billing, etc
       title: varchar("title").notNull(),
@@ -416,7 +437,7 @@ var init_schema = __esm({
     });
     bills = pgTable("bills", {
       id: serial("id").primaryKey(),
-      userId: varchar("user_id").references(() => users2.id).notNull(),
+      userId: varchar("user_id").references(() => users.id).notNull(),
       month: integer("month").notNull(),
       // 1-12
       year: integer("year").notNull(),
@@ -435,14 +456,21 @@ var init_schema = __esm({
       paymentDate: timestamp("payment_date"),
       paymentMethod: varchar("payment_method"),
       notes: text("notes"),
+      // Admin uploads a bill/PDF for the user
+      billPdfUrl: text("bill_pdf_url"),
+      // User uploads payment screenshot
+      paymentScreenshotUrl: text("payment_screenshot_url"),
+      // pending_review | approved | rejected
+      paymentScreenshotStatus: varchar("payment_screenshot_status"),
+      paymentScreenshotUploadedAt: timestamp("payment_screenshot_uploaded_at"),
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
     });
     subscriptionsRelations = relations(milkSubscriptions, ({ many, one }) => ({
       deliveries: many(subscriptionDeliveries),
-      user: one(users2, {
+      user: one(users, {
         fields: [milkSubscriptions.userId],
-        references: [users2.id]
+        references: [users.id]
       }),
       product: one(products, {
         fields: [milkSubscriptions.productId],
@@ -454,16 +482,16 @@ var init_schema = __esm({
         fields: [subscriptionDeliveries.subscriptionId],
         references: [milkSubscriptions.id]
       }),
-      user: one(users2, {
+      user: one(users, {
         fields: [subscriptionDeliveries.userId],
-        references: [users2.id]
+        references: [users.id]
       })
     }));
     ordersRelations = relations(orders, ({ many, one }) => ({
       items: many(orderItems),
-      user: one(users2, {
+      user: one(users, {
         fields: [orders.userId],
-        references: [users2.id]
+        references: [users.id]
       })
     }));
     orderItemsRelations = relations(orderItems, ({ one }) => ({
@@ -482,9 +510,9 @@ var init_schema = __esm({
       subscriptions: many(milkSubscriptions)
     }));
     deliveryPartnersRelations = relations(deliveryPartners, ({ one }) => ({
-      user: one(users2, {
+      user: one(users, {
         fields: [deliveryPartners.userId],
-        references: [users2.id]
+        references: [users.id]
       })
     }));
     driversRelations = relations(drivers, ({ one }) => ({
@@ -494,9 +522,9 @@ var init_schema = __esm({
       })
     }));
     adminsRelations = relations(admins, ({ one }) => ({
-      user: one(users2, {
+      user: one(users, {
         fields: [admins.userId],
-        references: [users2.id]
+        references: [users.id]
       })
     }));
     cartRelations = relations(cart, ({ many }) => ({
@@ -513,9 +541,9 @@ var init_schema = __esm({
       })
     }));
     addressesRelations = relations(addresses, ({ one }) => ({
-      user: one(users2, {
+      user: one(users, {
         fields: [addresses.userId],
-        references: [users2.id]
+        references: [users.id]
       })
     }));
     productVendorsRelations = relations(productVendors, ({ one }) => ({
@@ -529,9 +557,9 @@ var init_schema = __esm({
       })
     }));
     billsRelations = relations(bills, ({ one }) => ({
-      user: one(users2, {
+      user: one(users, {
         fields: [bills.userId],
-        references: [users2.id]
+        references: [users.id]
       })
     }));
     banners = pgTable("banners", {
@@ -613,7 +641,7 @@ var init_schema = __esm({
       createdAt: timestamp("created_at").defaultNow(),
       updatedAt: timestamp("updated_at").defaultNow()
     });
-    faqs2 = pgTable("faqs", {
+    faqs = pgTable("faqs", {
       id: serial("id").primaryKey(),
       category: varchar("category").notNull().default("General"),
       question: varchar("question").notNull(),
@@ -754,6 +782,148 @@ var init_schema = __esm({
     insertHomepageSectionSchema = createInsertSchema(homepageSections);
     insertContactSubmissionSchema = createInsertSchema(contactSubmissions);
     insertSiteSettingsSchema = createInsertSchema(siteSettings);
+    offers = pgTable("offers", {
+      id: serial("id").primaryKey(),
+      title: varchar("title").notNull(),
+      description: text("description"),
+      code: varchar("code").unique(),
+      discount: varchar("discount"),
+      minOrder: integer("min_order"),
+      type: varchar("type"),
+      // 'percentage', 'amount'
+      category: varchar("category"),
+      isActive: boolean("is_active").default(true),
+      validFrom: date("valid_from").notNull(),
+      validTo: date("valid_to").notNull(),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    coupons = pgTable("coupons", {
+      id: serial("id").primaryKey(),
+      code: varchar("code").unique().notNull(),
+      discountType: varchar("discount_type").notNull(),
+      // 'percentage', 'amount'
+      discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
+      maxDiscount: decimal("max_discount", { precision: 10, scale: 2 }),
+      minOrderValue: decimal("min_order_value", { precision: 10, scale: 2 }),
+      usageLimit: integer("usage_limit"),
+      usageCount: integer("usage_count").default(0),
+      isActive: boolean("is_active").default(true),
+      validFrom: date("valid_from").notNull(),
+      validTo: date("valid_to").notNull(),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    blogs = pgTable("blogs", {
+      id: serial("id").primaryKey(),
+      title: varchar("title").notNull(),
+      slug: varchar("slug").unique().notNull(),
+      shortDescription: text("short_description").notNull(),
+      content: text("content").notNull(),
+      featuredImage: varchar("featured_image"),
+      keywords: text("keywords"),
+      metaTitle: varchar("meta_title"),
+      metaDescription: text("meta_description"),
+      status: varchar("status").notNull().default("Draft"),
+      // Draft, Published, Unpublished
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    videoBlogs = pgTable("video_blogs", {
+      id: serial("id").primaryKey(),
+      title: varchar("title").notNull(),
+      slug: varchar("slug").unique().notNull(),
+      shortDescription: text("short_description").notNull(),
+      content: text("content"),
+      videoType: varchar("video_type").notNull(),
+      // YouTube, Vimeo, Local Upload, External URL
+      videoUrl: varchar("video_url"),
+      uploadedVideo: varchar("uploaded_video"),
+      thumbnailImage: varchar("thumbnail_image"),
+      keywords: text("keywords"),
+      metaTitle: varchar("meta_title"),
+      metaDescription: text("meta_description"),
+      status: varchar("status").notNull().default("Draft"),
+      // Draft, Published, Unpublished
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    imageGallery = pgTable("image_gallery", {
+      id: serial("id").primaryKey(),
+      title: varchar("title").notNull(),
+      image: varchar("image").notNull(),
+      altText: varchar("alt_text"),
+      category: varchar("category").notNull().default("General"),
+      sortOrder: integer("sort_order").default(0),
+      status: varchar("status").notNull().default("Published"),
+      // Draft, Published, Unpublished
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    videoGallery = pgTable("video_gallery", {
+      id: serial("id").primaryKey(),
+      title: varchar("title").notNull(),
+      videoType: varchar("video_type").notNull(),
+      // YouTube, Vimeo, Local Upload, External URL
+      videoUrl: varchar("video_url"),
+      uploadedVideo: varchar("uploaded_video"),
+      thumbnailImage: varchar("thumbnail_image"),
+      category: varchar("category").notNull().default("General"),
+      sortOrder: integer("sort_order").default(0),
+      status: varchar("status").notNull().default("Published"),
+      // Draft, Published, Unpublished
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    insertBlogSchema = createInsertSchema(blogs);
+    insertVideoBlogSchema = createInsertSchema(videoBlogs);
+    insertImageGallerySchema = createInsertSchema(imageGallery);
+    insertVideoGallerySchema = createInsertSchema(videoGallery);
+    passwordResetRequests = pgTable("password_reset_requests", {
+      id: serial("id").primaryKey(),
+      userId: varchar("user_id").notNull(),
+      email: varchar("email").notNull(),
+      status: varchar("status").notNull().default("pending"),
+      // pending, resolved
+      createdAt: timestamp("created_at").defaultNow().notNull(),
+      resolvedAt: timestamp("resolved_at")
+    });
+    passwordResetTokens = pgTable("password_reset_tokens", {
+      id: serial("id").primaryKey(),
+      userId: varchar("user_id").notNull(),
+      tokenHash: varchar("token_hash").notNull(),
+      expiresAt: timestamp("expires_at").notNull(),
+      used: boolean("used").notNull().default(false),
+      createdAt: timestamp("created_at").defaultNow().notNull()
+    });
+    chatThreads = pgTable("chat_threads", {
+      id: serial("id").primaryKey(),
+      userId: varchar("user_id").notNull(),
+      status: varchar("status").notNull().default("pending"),
+      // pending, active, resolved
+      lastMessage: text("last_message"),
+      unreadForAdmin: integer("unread_for_admin").notNull().default(0),
+      unreadForUser: integer("unread_for_user").notNull().default(0),
+      createdAt: timestamp("created_at").defaultNow().notNull(),
+      updatedAt: timestamp("updated_at").defaultNow().notNull()
+    });
+    chatMessages = pgTable("chat_messages", {
+      id: serial("id").primaryKey(),
+      threadId: integer("thread_id").notNull(),
+      senderId: varchar("sender_id"),
+      // Can be null if sent by system
+      senderRole: varchar("sender_role").notNull(),
+      // user, admin
+      message: text("message").notNull(),
+      isRead: boolean("is_read").notNull().default(false),
+      fileUrl: text("file_url"),
+      fileName: text("file_name"),
+      createdAt: timestamp("created_at").defaultNow().notNull()
+    });
+    insertPasswordResetRequestSchema = createInsertSchema(passwordResetRequests);
+    insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens);
+    insertChatThreadSchema = createInsertSchema(chatThreads);
+    insertChatMessageSchema = createInsertSchema(chatMessages);
   }
 });
 
@@ -794,7 +964,7 @@ __export(generateInvoice_exports, {
   createInvoiceHTML: () => createInvoiceHTML,
   getBillInvoiceData: () => getBillInvoiceData
 });
-import { eq as eq18 } from "drizzle-orm";
+import { eq as eq22 } from "drizzle-orm";
 function createInvoiceHTML(data) {
   const createdDate = (/* @__PURE__ */ new Date()).toLocaleDateString("en-IN", {
     year: "numeric",
@@ -1105,10 +1275,10 @@ function createInvoiceHTML(data) {
   return html;
 }
 async function getBillInvoiceData(billId) {
-  const bill = await db.select().from(bills).where(eq18(bills.id, billId));
+  const bill = await db.select().from(bills).where(eq22(bills.id, billId));
   if (!bill.length) return null;
   const billRecord = bill[0];
-  const user = await db.select().from(users2).where(eq18(users2.id, billRecord.userId));
+  const user = await db.select().from(users).where(eq22(users.id, billRecord.userId));
   if (!user.length) return null;
   const monthNames = [
     "January",
@@ -1125,8 +1295,10 @@ async function getBillInvoiceData(billId) {
     "December"
   ];
   const items = typeof billRecord.items === "string" ? JSON.parse(billRecord.items) : billRecord.items;
-  const dueDateStr = typeof billRecord.dueDate === "string" ? billRecord.dueDate : billRecord.dueDate instanceof Date ? billRecord.dueDate.toISOString() : new Date(billRecord.dueDate).toISOString();
-  const createdAtStr = billRecord.createdAt instanceof Date ? billRecord.createdAt.toISOString() : new Date(billRecord.createdAt).toISOString();
+  const dueDateVal = billRecord.dueDate;
+  const dueDateStr = typeof dueDateVal === "string" ? dueDateVal : dueDateVal instanceof Date ? dueDateVal.toISOString() : dueDateVal ? new Date(dueDateVal).toISOString() : "";
+  const createdAtVal = billRecord.createdAt;
+  const createdAtStr = createdAtVal instanceof Date ? createdAtVal.toISOString() : createdAtVal ? new Date(createdAtVal).toISOString() : (/* @__PURE__ */ new Date()).toISOString();
   return {
     billId: billRecord.id,
     customerName: `${user[0].firstName || ""} ${user[0].lastName || ""}`.trim() || "N/A",
@@ -1296,7 +1468,7 @@ import "dotenv/config";
 import express2 from "express";
 import fileUpload from "express-fileupload";
 import cron from "node-cron";
-import path4 from "path";
+import path7 from "path";
 
 // server/routes.ts
 import { createServer } from "http";
@@ -1304,16 +1476,16 @@ import { createServer } from "http";
 // server/storage.ts
 init_schema();
 init_db();
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, or, isNull, lte, gte } from "drizzle-orm";
 var DatabaseStorage = class {
   // User operations - mandatory for Replit Auth
   async getUser(id) {
-    const [user] = await db.select().from(users2).where(eq(users2.id, id));
+    const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
   async upsertUser(userData) {
-    const [user] = await db.insert(users2).values(userData).onConflictDoUpdate({
-      target: users2.id,
+    const [user] = await db.insert(users).values(userData).onConflictDoUpdate({
+      target: users.id,
       set: {
         ...userData,
         updatedAt: /* @__PURE__ */ new Date()
@@ -1322,10 +1494,10 @@ var DatabaseStorage = class {
     return user;
   }
   async updateUser(id, userData) {
-    const [user] = await db.update(users2).set({
+    const [user] = await db.update(users).set({
       ...userData,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq(users2.id, id)).returning();
+    }).where(eq(users.id, id)).returning();
     if (!user) {
       throw new Error("User not found");
     }
@@ -1333,12 +1505,12 @@ var DatabaseStorage = class {
   }
   // Get user by email
   async getUserByEmail(email) {
-    const [user] = await db.select().from(users2).where(eq(users2.email, email));
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
   // Create user with password (for simple auth)
   async createUserWithPassword(userData) {
-    const [user] = await db.insert(users2).values(userData).returning();
+    const [user] = await db.insert(users).values(userData).returning();
     return user;
   }
   // Category operations
@@ -1395,17 +1567,19 @@ var DatabaseStorage = class {
     if (status.toUpperCase() === "DELIVERED" && order && order.status.toUpperCase() !== "DELIVERED") {
       const items = await this.getOrderItemsByOrder(id);
       for (const item of items) {
-        await this.decrementProductStock(item.productId, item.quantity);
-        await this.recordStockMovement({
-          productId: item.productId,
-          type: "OUT",
-          reason: "ORDER_DELIVERED",
-          quantity: item.quantity,
-          previousStock: 0,
-          // Would need more queries to get exact
-          newStock: 0,
-          notes: `Order #${id} delivered`
-        });
+        if (item.productId) {
+          await this.decrementProductStock(item.productId, item.quantity);
+          await this.recordStockMovement({
+            productId: item.productId,
+            type: "OUT",
+            reason: "ORDER_DELIVERED",
+            quantity: item.quantity,
+            previousStock: 0,
+            // Would need more queries to get exact
+            newStock: 0,
+            notes: `Order #${id} delivered`
+          });
+        }
       }
     }
     return updatedOrder;
@@ -1446,7 +1620,7 @@ var DatabaseStorage = class {
   }
   // Milk subscription operations
   async getMilkSubscriptionByUser(userId) {
-    const [subscription] = await db.select().from(milkSubscriptions).where(and(eq(milkSubscriptions.userId, userId), eq(milkSubscriptions.isActive, true)));
+    const [subscription] = await db.select().from(milkSubscriptions).where(and(eq(milkSubscriptions.userId, userId), eq(milkSubscriptions.status, "ACTIVE")));
     return subscription;
   }
   async createMilkSubscription(subscription) {
@@ -1509,7 +1683,7 @@ var DatabaseStorage = class {
     }
     const existingItem = await db.select().from(cartItems).where(and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId))).limit(1);
     if (existingItem.length > 0) {
-      const [updatedItem] = await db.update(cartItems).set({ quantity: existingItem[0].quantity + quantity }).where(eq(cartItems.id, existingItem[0].id)).returning();
+      const [updatedItem] = await db.update(cartItems).set({ quantity: (existingItem[0].quantity || 0) + quantity }).where(eq(cartItems.id, existingItem[0].id)).returning();
       return updatedItem;
     } else {
       const [newItem] = await db.insert(cartItems).values({ cartId, productId, quantity, price: product.price }).returning();
@@ -1594,16 +1768,22 @@ var DatabaseStorage = class {
   async getDriversByVendor(vendorId) {
     return await db.select().from(drivers).where(eq(drivers.vendorId, vendorId)).orderBy(desc(drivers.createdAt));
   }
+  async getAllStockMovements() {
+    return [];
+  }
+  async getStockMovementsByProduct(productId) {
+    return [];
+  }
   // Customer management - get all customers
   async getAllCustomers() {
-    return await db.select().from(users2).where(eq(users2.role, "customer")).orderBy(desc(users2.createdAt));
+    return await db.select().from(users).where(eq(users.role, "customer")).orderBy(desc(users.createdAt));
   }
   // Subscription management - get all subscriptions
   async getAllSubscriptions() {
     const allSubscriptions = await db.select().from(milkSubscriptions).orderBy(desc(milkSubscriptions.createdAt));
     const enrichedSubscriptions = await Promise.all(
       allSubscriptions.map(async (sub) => {
-        const user = await this.getUser(sub.userId);
+        const user = sub.userId ? await this.getUser(sub.userId) : void 0;
         return { ...sub, user };
       })
     );
@@ -1615,7 +1795,7 @@ var DatabaseStorage = class {
     const allProducts = await db.select().from(products);
     const allVendors = await db.select().from(vendors);
     const allDeliveryPartners = await db.select().from(deliveryPartners);
-    const allCustomers = await db.select().from(users2).where(eq(users2.role, "customer"));
+    const allCustomers = await db.select().from(users).where(eq(users.role, "customer"));
     const totalRevenue = allOrders.reduce((sum, order) => {
       return sum + (parseFloat(order.totalAmount) || 0);
     }, 0);
@@ -1682,12 +1862,12 @@ var DatabaseStorage = class {
     return await db.select().from(statsCounters2).where(eq(statsCounters2.isActive, true)).orderBy(asc(statsCounters2.displayOrder));
   }
   async getFAQs() {
-    const { faqs: faqs3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    return await db.select().from(faqs3).orderBy(asc(faqs3.displayOrder));
+    const { faqs: faqs2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    return await db.select().from(faqs2).orderBy(asc(faqs2.displayOrder));
   }
   async getActiveFAQs() {
-    const { faqs: faqs3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    return await db.select().from(faqs3).where(eq(faqs3.isActive, true)).orderBy(asc(faqs3.displayOrder));
+    const { faqs: faqs2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    return await db.select().from(faqs2).where(eq(faqs2.isActive, true)).orderBy(asc(faqs2.displayOrder));
   }
   async getNewsletterSettings() {
     const { newsletterSettings: newsletterSettings2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
@@ -1802,6 +1982,91 @@ var DatabaseStorage = class {
       return created;
     }
   }
+  // User Management Implementations
+  async getAllUsers() {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+  // Password reset operations Implementations
+  async createPasswordResetRequest(request) {
+    const [created] = await db.insert(passwordResetRequests).values(request).returning();
+    return created;
+  }
+  async getPasswordResetRequests() {
+    return await db.select().from(passwordResetRequests).orderBy(desc(passwordResetRequests.createdAt));
+  }
+  async getPasswordResetRequestById(id) {
+    const [request] = await db.select().from(passwordResetRequests).where(eq(passwordResetRequests.id, id));
+    return request;
+  }
+  async updatePasswordResetRequestStatus(id, status, resolvedAt) {
+    const [updated] = await db.update(passwordResetRequests).set({ status, resolvedAt }).where(eq(passwordResetRequests.id, id)).returning();
+    return updated;
+  }
+  async createPasswordResetToken(token) {
+    const [created] = await db.insert(passwordResetTokens).values(token).returning();
+    return created;
+  }
+  async getPasswordResetToken(tokenHash) {
+    const [token] = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.tokenHash, tokenHash));
+    return token;
+  }
+  async markPasswordResetTokenUsed(id) {
+    await db.update(passwordResetTokens).set({ used: true }).where(eq(passwordResetTokens.id, id));
+  }
+  // Chat Support operations Implementations
+  async getOrCreateChatThread(userId) {
+    const [existing] = await db.select().from(chatThreads).where(eq(chatThreads.userId, userId));
+    if (existing) {
+      return existing;
+    }
+    const [created] = await db.insert(chatThreads).values({ userId, status: "pending" }).returning();
+    return created;
+  }
+  async getChatThreadById(id) {
+    const [thread] = await db.select().from(chatThreads).where(eq(chatThreads.id, id));
+    return thread;
+  }
+  async getChatThreads() {
+    const allThreads = await db.select().from(chatThreads).orderBy(desc(chatThreads.updatedAt));
+    const threadsWithUser = [];
+    for (const thread of allThreads) {
+      const [user] = await db.select().from(users).where(eq(users.id, thread.userId));
+      threadsWithUser.push({
+        ...thread,
+        user
+      });
+    }
+    return threadsWithUser;
+  }
+  async getChatMessages(threadId) {
+    return await db.select().from(chatMessages).where(eq(chatMessages.threadId, threadId)).orderBy(asc(chatMessages.createdAt));
+  }
+  async createChatMessage(message) {
+    const [created] = await db.insert(chatMessages).values(message).returning();
+    await db.update(chatThreads).set({ lastMessage: message.message, updatedAt: /* @__PURE__ */ new Date() }).where(eq(chatThreads.id, message.threadId));
+    return created;
+  }
+  async updateChatThreadStatus(id, status) {
+    const [updated] = await db.update(chatThreads).set({ status }).where(eq(chatThreads.id, id)).returning();
+    return updated;
+  }
+  async incrementUnreadCount(threadId, forRole) {
+    const [thread] = await db.select().from(chatThreads).where(eq(chatThreads.id, threadId));
+    if (thread) {
+      if (forRole === "admin") {
+        await db.update(chatThreads).set({ unreadForAdmin: thread.unreadForAdmin + 1 }).where(eq(chatThreads.id, threadId));
+      } else {
+        await db.update(chatThreads).set({ unreadForUser: thread.unreadForUser + 1 }).where(eq(chatThreads.id, threadId));
+      }
+    }
+  }
+  async resetUnreadCount(threadId, forRole) {
+    if (forRole === "admin") {
+      await db.update(chatThreads).set({ unreadForAdmin: 0 }).where(eq(chatThreads.id, threadId));
+    } else {
+      await db.update(chatThreads).set({ unreadForUser: 0 }).where(eq(chatThreads.id, threadId));
+    }
+  }
 };
 var storage = new DatabaseStorage();
 
@@ -1826,7 +2091,7 @@ var getOidcConfig = memoize(
   { maxAge: 3600 * 1e3 }
 );
 function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1e3;
+  const sessionTtl = 30 * 24 * 60 * 60 * 1e3;
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
@@ -1867,8 +2132,8 @@ async function setupAuth(app2) {
   app2.set("trust proxy", 1);
   const sessionMiddleware = getSession();
   app2.use((req, res, next) => {
-    const path5 = req.path;
-    if (!path5.startsWith("/api")) {
+    const path8 = req.path;
+    if (!path8.startsWith("/api")) {
       return next();
     }
     sessionMiddleware(req, res, next);
@@ -1940,7 +2205,8 @@ async function setupAuth(app2) {
   });
 }
 var isAuthenticated = async (req, res, next) => {
-  if (req.session && req.session.userId) {
+  const session2 = req.session;
+  if (session2 && session2.userId) {
     return next();
   }
   const user = req.user;
@@ -1984,6 +2250,12 @@ function setupAuthRoutes(app2) {
           code: "USER_NOT_FOUND"
         });
       }
+      if (user.isActive === false) {
+        return res.status(403).json({
+          message: "Your account has been blocked. Please contact support.",
+          code: "USER_BLOCKED"
+        });
+      }
       const passwordMatch = await bcryptjs.compare(
         password,
         user.passwordHash || ""
@@ -1991,6 +2263,7 @@ function setupAuthRoutes(app2) {
       if (!passwordMatch) {
         return res.status(401).json({ message: "Invalid password" });
       }
+      await storage.updateUser(user.id, { lastLogin: /* @__PURE__ */ new Date() });
       req.session.userId = user.id;
       req.session.userRole = user.role;
       req.session.userEmail = user.email;
@@ -2032,6 +2305,10 @@ function setupAuthRoutes(app2) {
       if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required" });
       }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
       if (password.length < 6) {
         return res.status(400).json({
           message: "Password must be at least 6 characters"
@@ -2059,7 +2336,9 @@ function setupAuthRoutes(app2) {
         phone,
         address,
         profileImageUrl,
-        role: "customer"
+        role: "customer",
+        isActive: true,
+        lastLogin: /* @__PURE__ */ new Date()
       });
       req.session.userId = newUser.id;
       req.session.userRole = newUser.role;
@@ -2093,6 +2372,11 @@ function setupAuthRoutes(app2) {
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
+      if (user.isActive === false) {
+        req.session.destroy(() => {
+        });
+        return res.status(403).json({ message: "Your account has been blocked. Please contact support." });
+      }
       res.json({
         id: user.id,
         email: user.email,
@@ -2106,6 +2390,35 @@ function setupAuthRoutes(app2) {
     } catch (error) {
       console.error("Error fetching current user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+  app2.post("/api/auth/change-password", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new passwords are required" });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters" });
+      }
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const isMatch = await bcryptjs.compare(currentPassword, user.passwordHash || "");
+      if (!isMatch) {
+        return res.status(400).json({ message: "Incorrect current password" });
+      }
+      const salt = await bcryptjs.genSalt(10);
+      const newHash = await bcryptjs.hash(newPassword, salt);
+      await storage.updateUser(user.id, { passwordHash: newHash });
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Failed to change password" });
     }
   });
   app2.post("/api/admin/login", async (req, res) => {
@@ -2395,7 +2708,7 @@ var AddressRepository = class {
   async getAddressesByUser(userId) {
     return await db.query.addresses.findMany({
       where: eq3(addresses.userId, userId),
-      orderBy: (addresses3, { desc: desc7 }) => [desc7(addresses3.isDefault)]
+      orderBy: (addresses3, { desc: desc11 }) => [desc11(addresses3.isDefault)]
     });
   }
   async getAddressById(addressId) {
@@ -2688,7 +3001,7 @@ var SupportRepository = class {
     if (!ticket) return null;
     const messages = await db.query.ticketMessages.findMany({
       where: eq5(ticketMessages.ticketId, ticketId),
-      orderBy: (ticketMessages2, { asc: asc4 }) => [asc4(ticketMessages2.createdAt)]
+      orderBy: (ticketMessages2, { asc: asc6 }) => [asc6(ticketMessages2.createdAt)]
     });
     return { ticket, messages };
   }
@@ -2713,12 +3026,12 @@ var SupportRepository = class {
     if (category) {
       return await db.query.faqs.findMany({
         where: eq5(faqs.category, category),
-        orderBy: (faqs3, { asc: asc4 }) => [asc4(faqs3.order)]
+        orderBy: (faqs2, { asc: asc6 }) => [asc6(faqs2.order)]
       });
     }
     return await db.query.faqs.findMany({
       where: eq5(faqs.isActive, true),
-      orderBy: (faqs3, { asc: asc4 }) => [asc4(faqs3.order)]
+      orderBy: (faqs2, { asc: asc6 }) => [asc6(faqs2.order)]
     });
   }
 };
@@ -2788,8 +3101,8 @@ router4.post("/tickets/:id/messages", async (req, res) => {
 router4.get("/faqs", async (req, res) => {
   try {
     const category = req.query.category;
-    const faqs3 = await supportRepository.getFaqs(category);
-    res.json(faqs3);
+    const faqs2 = await supportRepository.getFaqs(category);
+    res.json(faqs2);
   } catch (error) {
     console.error("Error fetching FAQs:", error);
     res.status(500).json({ message: "Failed to fetch FAQs" });
@@ -2802,6 +3115,7 @@ import { Router as Router5 } from "express";
 
 // server/storage/offers.repository.ts
 init_db();
+init_schema();
 import { eq as eq6, and as and5, sql } from "drizzle-orm";
 var OffersRepository = class {
   async getActiveOffers() {
@@ -2812,7 +3126,7 @@ var OffersRepository = class {
         sql`${offers.validFrom} <= ${today}`,
         sql`${offers.validTo} >= ${today}`
       ),
-      orderBy: (offers2, { desc: desc7 }) => [desc7(offers2.createdAt)]
+      orderBy: (offers2, { desc: desc11 }) => [desc11(offers2.createdAt)]
     });
   }
   async getOfferById(offerId) {
@@ -2941,7 +3255,7 @@ router6.post("/", async (req, res) => {
   try {
     const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
-    const { productId, quantity, frequency, deliveryTime, startDate } = req.body;
+    const { productId, quantity, frequency, deliveryTime } = req.body;
     const productIdInt = parseInt(productId);
     const product = await db.query.products.findFirst({
       where: eq7(products.id, productIdInt)
@@ -2949,18 +3263,19 @@ router6.post("/", async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+    const tomorrow = /* @__PURE__ */ new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    const deliveryStartDate = new Date(tomorrowStr);
     const newSub = await db.insert(milkSubscriptions).values({
       userId,
       productId: productIdInt,
-      quantity: parseFloat(quantity).toString(),
+      quantity: parseInt(quantity),
       frequency,
       deliveryTime,
-      startDate: new Date(startDate),
+      startDate: tomorrowStr,
       status: "ACTIVE",
-      isActive: true,
-      isPaused: false,
-      pricePerL: product.price,
-      nextDeliveryDate: new Date(startDate)
+      pricePerL: product.price
     }).returning();
     res.status(201).json({ message: "Subscription created", subscription: newSub[0] });
   } catch (error) {
@@ -2973,19 +3288,29 @@ router6.get("/me", async (req, res) => {
     const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
     const subscriptions = await db.select().from(milkSubscriptions).where(eq7(milkSubscriptions.userId, userId));
+    const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+    const todayDate = new Date(todayStr);
     const subscriptionsWithProducts = await Promise.all(
       subscriptions.map(async (sub) => {
-        const product = await db.query.products.findFirst({
+        const product = sub.productId ? await db.query.products.findFirst({
           where: eq7(products.id, sub.productId)
-        });
+        }) : void 0;
         const perDeliveryAmount = toAmount(sub.pricePerL || product?.price) * toAmount(sub.quantity || 1);
         const monthlyDeliveryCount = getMonthlyDeliveryCount(sub.frequency);
+        const todayDelivery = await db.query.subscriptionDeliveries.findFirst({
+          where: and6(
+            eq7(subscriptionDeliveries.subscriptionId, sub.id),
+            eq7(subscriptionDeliveries.deliveryDate, todayStr)
+          )
+        });
         return {
           ...sub,
           product,
           perDeliveryAmount,
           monthlyDeliveryCount,
-          monthlyAmount: perDeliveryAmount * monthlyDeliveryCount
+          monthlyAmount: perDeliveryAmount * monthlyDeliveryCount,
+          todayDeliveryStatus: todayDelivery ? todayDelivery.status : "Pending",
+          todayDeliveryConfirmed: todayDelivery ? todayDelivery.confirmedByUser : false
         };
       })
     );
@@ -2993,6 +3318,58 @@ router6.get("/me", async (req, res) => {
   } catch (error) {
     console.error("Error fetching subscriptions:", error);
     res.status(500).json({ message: "Failed to fetch subscriptions" });
+  }
+});
+router6.post("/:id/confirm-delivery", async (req, res) => {
+  try {
+    const userId = req.session?.userId || req.user?.claims?.sub;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const subscriptionId = parseInt(req.params.id);
+    const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+    const todayDate = new Date(todayStr);
+    const subscription = await db.query.milkSubscriptions.findFirst({
+      where: and6(
+        eq7(milkSubscriptions.id, subscriptionId),
+        eq7(milkSubscriptions.userId, userId)
+      )
+    });
+    if (!subscription) {
+      return res.status(404).json({ message: "Subscription not found" });
+    }
+    if (subscription.status !== "ACTIVE") {
+      return res.status(400).json({ message: "Subscription is not active" });
+    }
+    const existingDelivery = await db.query.subscriptionDeliveries.findFirst({
+      where: and6(
+        eq7(subscriptionDeliveries.subscriptionId, subscriptionId),
+        eq7(subscriptionDeliveries.deliveryDate, todayStr)
+      )
+    });
+    if (existingDelivery) {
+      if (existingDelivery.confirmedByUser) {
+        return res.status(400).json({ message: "Milk delivery already confirmed for today" });
+      }
+      const updated = await db.update(subscriptionDeliveries).set({
+        status: "Delivered",
+        confirmedByUser: true,
+        confirmedAt: /* @__PURE__ */ new Date()
+      }).where(eq7(subscriptionDeliveries.id, existingDelivery.id)).returning();
+      return res.json({ message: "Today's delivery marked as received", delivery: updated[0] });
+    } else {
+      const newDelivery = await db.insert(subscriptionDeliveries).values({
+        subscriptionId,
+        userId,
+        deliveryDate: todayStr,
+        quantity: subscription.quantity,
+        status: "Delivered",
+        confirmedByUser: true,
+        confirmedAt: /* @__PURE__ */ new Date()
+      }).returning();
+      return res.json({ message: "Today's delivery marked as received", delivery: newDelivery[0] });
+    }
+  } catch (error) {
+    console.error("Error confirming delivery:", error);
+    res.status(500).json({ message: "Failed to confirm delivery" });
   }
 });
 router6.put("/:id", async (req, res) => {
@@ -3016,7 +3393,7 @@ router6.put("/:id/pause", async (req, res) => {
     const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
     const subscriptionId = parseInt(req.params.id);
-    const updated = await db.update(milkSubscriptions).set({ status: "PAUSED", isPaused: true }).where(and6(eq7(milkSubscriptions.id, subscriptionId), eq7(milkSubscriptions.userId, userId))).returning();
+    const updated = await db.update(milkSubscriptions).set({ status: "PAUSED" }).where(and6(eq7(milkSubscriptions.id, subscriptionId), eq7(milkSubscriptions.userId, userId))).returning();
     if (!updated.length) {
       return res.status(404).json({ message: "Subscription not found" });
     }
@@ -3031,7 +3408,7 @@ router6.put("/:id/resume", async (req, res) => {
     const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
     const subscriptionId = parseInt(req.params.id);
-    const updated = await db.update(milkSubscriptions).set({ status: "ACTIVE", isPaused: false }).where(and6(eq7(milkSubscriptions.id, subscriptionId), eq7(milkSubscriptions.userId, userId))).returning();
+    const updated = await db.update(milkSubscriptions).set({ status: "ACTIVE" }).where(and6(eq7(milkSubscriptions.id, subscriptionId), eq7(milkSubscriptions.userId, userId))).returning();
     if (!updated.length) {
       return res.status(404).json({ message: "Subscription not found" });
     }
@@ -3051,7 +3428,7 @@ router6.put("/:id/skip-tomorrow", async (req, res) => {
     await db.insert(subscriptionDeliveries).values({
       subscriptionId,
       userId,
-      deliveryDate: tomorrow,
+      deliveryDate: tomorrow.toISOString().split("T")[0],
       quantity: 0,
       status: "SKIPPED"
     });
@@ -3162,7 +3539,7 @@ router7.get("/", requireAdminAccess, async (req, res) => {
     const withDetails = await Promise.all(
       allSubs.map(async (sub) => {
         const customer = await db.query.users.findFirst({
-          where: eq8(users2.id, sub.userId)
+          where: eq8(users.id, sub.userId)
         });
         const product = await db.query.products.findFirst({
           where: eq8(products.id, sub.productId)
@@ -3179,8 +3556,8 @@ router7.get("/", requireAdminAccess, async (req, res) => {
 router7.get("/today/requirement", requireAdminAccess, async (req, res) => {
   try {
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const deliveries = await db.select().from(subscriptionDeliveries).where(eq8(subscriptionDeliveries.deliveryDate, new Date(today)));
-    const totalRequired = deliveries.reduce((sum, d) => sum + parseFloat(d.quantity.toString()), 0);
+    const deliveries = await db.select().from(subscriptionDeliveries).where(eq8(subscriptionDeliveries.deliveryDate, today));
+    const totalRequired = deliveries.reduce((sum, d) => sum + (d.quantity || 0), 0);
     res.json({
       date: today,
       totalRequired,
@@ -3208,7 +3585,7 @@ router7.patch("/:id/status", requireAdminAccess, async (req, res) => {
 });
 router7.post("/", requireAdminAccess, async (req, res) => {
   try {
-    const { userId, productId, quantity, frequency, deliveryTime, startDate } = req.body;
+    const { userId, productId, quantity, frequency, deliveryTime, pricePerL } = req.body;
     if (!userId || !productId) {
       return res.status(400).json({ message: "Customer and Product are required" });
     }
@@ -3219,23 +3596,51 @@ router7.post("/", requireAdminAccess, async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+    const tomorrow = /* @__PURE__ */ new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
     const newSub = await db.insert(milkSubscriptions).values({
       userId,
       productId: productIdInt,
-      quantity: parseFloat(quantity || "1").toString(),
+      quantity: parseInt(quantity || "1"),
       frequency: frequency || "daily",
       deliveryTime: deliveryTime || "7-8 AM",
-      startDate: startDate ? new Date(startDate) : /* @__PURE__ */ new Date(),
+      startDate: tomorrowStr,
       status: "ACTIVE",
-      isActive: true,
-      isPaused: false,
-      pricePerL: product.price,
-      nextDeliveryDate: startDate ? new Date(startDate) : /* @__PURE__ */ new Date()
+      pricePerL: pricePerL !== void 0 && pricePerL !== "" ? pricePerL.toString() : product.price
     }).returning();
     res.status(201).json({ message: "Subscription created", subscription: newSub[0] });
   } catch (error) {
     console.error("Error creating subscription:", error);
     res.status(500).json({ message: "Failed to create subscription" });
+  }
+});
+router7.put("/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const subId = parseInt(req.params.id);
+    const { userId, productId, quantity, frequency, deliveryTime, pricePerL } = req.body;
+    const productIdInt = parseInt(productId);
+    const product = await db.query.products.findFirst({
+      where: eq8(products.id, productIdInt)
+    });
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    const updated = await db.update(milkSubscriptions).set({
+      userId,
+      productId: productIdInt,
+      quantity: parseInt(quantity || "1"),
+      frequency: frequency || "daily",
+      deliveryTime: deliveryTime || "7-8 AM",
+      pricePerL: pricePerL !== void 0 && pricePerL !== "" ? pricePerL.toString() : product.price
+    }).where(eq8(milkSubscriptions.id, subId)).returning();
+    if (!updated.length) {
+      return res.status(404).json({ message: "Subscription not found" });
+    }
+    res.json({ message: "Subscription updated", subscription: updated[0] });
+  } catch (error) {
+    console.error("Error updating subscription:", error);
+    res.status(500).json({ message: "Failed to update subscription" });
   }
 });
 router7.delete("/:id", requireAdminAccess, async (req, res) => {
@@ -3249,6 +3654,90 @@ router7.delete("/:id", requireAdminAccess, async (req, res) => {
   } catch (error) {
     console.error("Error deleting subscription:", error);
     res.status(500).json({ message: "Failed to delete subscription" });
+  }
+});
+router7.get("/dashboard-summary", requireAdminAccess, async (req, res) => {
+  try {
+    const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+    const todayDate = new Date(todayStr);
+    const tomorrow = /* @__PURE__ */ new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    const tomorrowDate = new Date(tomorrowStr);
+    const allSubs = await db.select().from(milkSubscriptions);
+    const activeSubs = allSubs.filter((s) => s.status === "ACTIVE");
+    const activeSubscriptionsCount = activeSubs.length;
+    const todayActive = activeSubs.filter((s) => {
+      const start = s.startDate ? new Date(s.startDate) : null;
+      return start && start <= todayDate;
+    });
+    const todayRequired = todayActive.reduce((sum, s) => sum + parseFloat(s.quantity.toString()), 0);
+    const tomorrowActive = activeSubs.filter((s) => {
+      const start = s.startDate ? new Date(s.startDate) : null;
+      return start && start <= tomorrowDate;
+    });
+    const tomorrowRequired = tomorrowActive.reduce((sum, s) => sum + parseFloat(s.quantity.toString()), 0);
+    const todayDeliveries = await db.select().from(subscriptionDeliveries).where(eq8(subscriptionDeliveries.deliveryDate, todayStr));
+    const todayDelivered = todayDeliveries.filter((d) => d.status?.toLowerCase() === "delivered").reduce((sum, d) => sum + parseFloat((d.quantity || 0).toString()), 0);
+    const todayRemaining = Math.max(0, todayRequired - todayDelivered);
+    const deliveredSubIds = new Set(
+      todayDeliveries.filter((d) => d.status?.toLowerCase() === "delivered").map((d) => d.subscriptionId)
+    );
+    const pendingDeliveriesTodayCount = todayActive.filter((s) => !deliveredSubIds.has(s.id)).length;
+    res.json({
+      todayRequired,
+      todayDelivered,
+      todayRemaining,
+      tomorrowRequired,
+      activeSubscriptionsCount,
+      pendingDeliveriesTodayCount
+    });
+  } catch (error) {
+    console.error("Error fetching dashboard summary:", error);
+    res.status(500).json({ message: "Failed to fetch dashboard summary" });
+  }
+});
+router7.get("/deliveries", requireAdminAccess, async (req, res) => {
+  try {
+    const dateParam = req.query.date;
+    const queryDateStr = dateParam || (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+    const queryDate = new Date(queryDateStr);
+    const allSubs = await db.select().from(milkSubscriptions);
+    const actualDeliveries = await db.select().from(subscriptionDeliveries).where(eq8(subscriptionDeliveries.deliveryDate, queryDateStr));
+    const deliveryMap = new Map(actualDeliveries.map((d) => [d.subscriptionId, d]));
+    const trackingList = await Promise.all(
+      allSubs.filter((sub) => {
+        if (deliveryMap.has(sub.id)) return true;
+        if (sub.status !== "ACTIVE") return false;
+        const start = sub.startDate ? new Date(sub.startDate) : null;
+        return start && start <= queryDate;
+      }).map(async (sub) => {
+        const customer = await db.query.users.findFirst({
+          where: eq8(users.id, sub.userId)
+        });
+        const product = await db.query.products.findFirst({
+          where: eq8(products.id, sub.productId)
+        });
+        const delivery = deliveryMap.get(sub.id);
+        return {
+          id: delivery?.id || `virtual-${sub.id}`,
+          subscriptionId: sub.id,
+          customerId: sub.userId,
+          customerName: customer ? `${customer.firstName || ""} ${customer.lastName || ""}`.trim() : "Unknown Customer",
+          productName: product ? product.name : "Unknown Product",
+          quantity: delivery ? delivery.quantity || 0 : sub.quantity,
+          status: delivery ? delivery.status : "Pending",
+          confirmedByUser: delivery ? delivery.confirmedByUser : false,
+          confirmedAt: delivery ? delivery.confirmedAt : null,
+          deliveryDate: queryDateStr
+        };
+      })
+    );
+    trackingList.sort((a, b) => a.customerName.localeCompare(b.customerName));
+    res.json(trackingList);
+  } catch (error) {
+    console.error("Error fetching deliveries list:", error);
+    res.status(500).json({ message: "Failed to fetch deliveries list" });
   }
 });
 var admin_subscriptions_routes_default = router7;
@@ -3324,7 +3813,7 @@ var addActivityLog = async (customerId, type, title, description, req, metadata 
 };
 var getCustomer = async (customerId) => {
   return db.query.users.findFirst({
-    where: eq9(users2.id, customerId)
+    where: eq9(users.id, customerId)
   });
 };
 var getCustomerAddresses = async (customerId) => {
@@ -3706,8 +4195,8 @@ router8.use(requireAdminAccess);
 router8.get("/", async (_req, res) => {
   try {
     const allCustomers = await db.query.users.findMany({
-      where: ne(users2.role, "admin"),
-      orderBy: [desc3(users2.createdAt)]
+      where: ne(users.role, "admin"),
+      orderBy: [desc3(users.createdAt)]
     });
     const customersWithStats = await Promise.all(
       allCustomers.map(async (customer) => {
@@ -3870,7 +4359,7 @@ router8.put("/:customerId/status", async (req, res) => {
       return res.status(400).json({ message: "Status must be active, blocked, or unblocked" });
     }
     const isActive = status === "active" || status === "unblocked";
-    const [updated] = await db.update(users2).set({ isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq9(users2.id, req.params.customerId)).returning();
+    const [updated] = await db.update(users).set({ isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq9(users.id, req.params.customerId)).returning();
     if (!updated) return res.status(404).json({ message: "Customer not found" });
     await addActivityLog(
       req.params.customerId,
@@ -4057,7 +4546,12 @@ var formatStoredBill = (bill) => {
     orderItems: orderItemsList,
     adjustments: buildAdjustments(bill),
     isGenerated: true,
-    isPreview: false
+    isPreview: false,
+    // Payment workflow fields
+    billPdfUrl: bill.billPdfUrl || null,
+    paymentScreenshotUrl: bill.paymentScreenshotUrl || null,
+    paymentScreenshotStatus: bill.paymentScreenshotStatus || null,
+    paymentScreenshotUploadedAt: bill.paymentScreenshotUploadedAt || null
   };
 };
 var addLineItem = (items, nextItem) => {
@@ -4231,7 +4725,7 @@ router9.get("/today-requirements", async (req, res) => {
       if (!isDeliveryDay) continue;
       if (!sub.userId || !sub.productId) continue;
       const user = await db.query.users.findFirst({
-        where: eq10(users2.id, sub.userId)
+        where: eq10(users.id, sub.userId)
       });
       const product = await db.query.products.findFirst({
         where: eq10(products.id, sub.productId)
@@ -4267,7 +4761,7 @@ router9.get("/today-requirements", async (req, res) => {
           customerName: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
           liters: quantity,
           deliveryTime: sub.deliveryTime || "Not specified",
-          address: defaultAddr?.address || "Awaiting address details",
+          address: defaultAddr?.address || user.address || "Awaiting address details",
           landmark: defaultAddr?.landmark || "",
           city: defaultAddr?.city || "Mumbai",
           state: defaultAddr?.state || "Maharashtra",
@@ -4400,8 +4894,8 @@ router9.post("/verify-payment", async (req, res) => {
     const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    const crypto = __require("crypto");
-    const generated_signature = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "").update(`${razorpay_order_id}|${razorpay_payment_id}`).digest("hex");
+    const crypto2 = __require("crypto");
+    const generated_signature = crypto2.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "").update(`${razorpay_order_id}|${razorpay_payment_id}`).digest("hex");
     if (generated_signature === razorpay_signature) {
       const currentDate = /* @__PURE__ */ new Date();
       const currentMonth = currentDate.getMonth();
@@ -4451,15 +4945,11 @@ router10.get("/", async (req, res) => {
     if (userId) {
       whereConditions.push(eq11(bills.userId, userId));
     }
-    let query = db.select().from(bills);
-    if (whereConditions.length > 0) {
-      query = query.where(and9(...whereConditions));
-    }
-    const allBills = await query;
+    const allBills = whereConditions.length > 0 ? await db.select().from(bills).where(and9(...whereConditions)) : await db.select().from(bills);
     const billsWithUsers = await Promise.all(
       allBills.map(async (bill) => {
         const user = await db.query.users.findFirst({
-          where: eq11(users2.id, bill.userId)
+          where: eq11(users.id, bill.userId)
         });
         return { ...bill, user };
       })
@@ -4468,6 +4958,23 @@ router10.get("/", async (req, res) => {
   } catch (error) {
     console.error("Error fetching bills:", error);
     res.status(500).json({ message: "Failed to fetch bills" });
+  }
+});
+router10.get("/payment-screenshots", async (req, res) => {
+  try {
+    const pendingBills = await db.select().from(bills).where(sql4`payment_screenshot_url IS NOT NULL`);
+    const billsWithUsers = await Promise.all(
+      pendingBills.map(async (bill) => {
+        const user = await db.query.users.findFirst({
+          where: eq11(users.id, bill.userId)
+        });
+        return { ...bill, user };
+      })
+    );
+    res.json(billsWithUsers);
+  } catch (error) {
+    console.error("Error fetching payment screenshots:", error);
+    res.status(500).json({ message: "Failed to fetch payment screenshots" });
   }
 });
 router10.get("/:id", async (req, res) => {
@@ -4480,7 +4987,7 @@ router10.get("/:id", async (req, res) => {
       return res.status(404).json({ message: "Bill not found" });
     }
     const user = await db.query.users.findFirst({
-      where: eq11(users2.id, bill.userId)
+      where: eq11(users.id, bill.userId)
     });
     res.json({ ...bill, user });
   } catch (error) {
@@ -4665,6 +5172,60 @@ router10.post("/generate", async (req, res) => {
     res.status(500).json({ message: "Failed to generate bill" });
   }
 });
+router10.post("/:id/upload-bill", async (req, res) => {
+  try {
+    const billId = parseInt(req.params.id);
+    const { billPdfUrl } = req.body;
+    if (!billPdfUrl) {
+      return res.status(400).json({ message: "billPdfUrl is required" });
+    }
+    const updated = await db.update(bills).set({ billPdfUrl, updatedAt: sql4`now()` }).where(eq11(bills.id, billId)).returning();
+    if (!updated.length) {
+      return res.status(404).json({ message: "Bill not found" });
+    }
+    res.json({ success: true, bill: updated[0], message: "Bill PDF uploaded" });
+  } catch (error) {
+    console.error("Error uploading bill PDF:", error);
+    res.status(500).json({ message: "Failed to upload bill PDF" });
+  }
+});
+router10.post("/:id/approve-screenshot", async (req, res) => {
+  try {
+    const billId = parseInt(req.params.id);
+    const updated = await db.update(bills).set({
+      paymentScreenshotStatus: "approved",
+      status: "paid",
+      paymentDate: sql4`now()`,
+      paymentMethod: "online_transfer",
+      updatedAt: sql4`now()`
+    }).where(eq11(bills.id, billId)).returning();
+    if (!updated.length) {
+      return res.status(404).json({ message: "Bill not found" });
+    }
+    res.json({ success: true, bill: updated[0], message: "Screenshot approved \u2013 bill marked as paid" });
+  } catch (error) {
+    console.error("Error approving screenshot:", error);
+    res.status(500).json({ message: "Failed to approve screenshot" });
+  }
+});
+router10.post("/:id/reject-screenshot", async (req, res) => {
+  try {
+    const billId = parseInt(req.params.id);
+    const { reason } = req.body;
+    const updated = await db.update(bills).set({
+      paymentScreenshotStatus: "rejected",
+      notes: reason ? `Screenshot rejected: ${reason}` : "Screenshot rejected by admin",
+      updatedAt: sql4`now()`
+    }).where(eq11(bills.id, billId)).returning();
+    if (!updated.length) {
+      return res.status(404).json({ message: "Bill not found" });
+    }
+    res.json({ success: true, bill: updated[0], message: "Screenshot rejected" });
+  } catch (error) {
+    console.error("Error rejecting screenshot:", error);
+    res.status(500).json({ message: "Failed to reject screenshot" });
+  }
+});
 var admin_billing_routes_default = router10;
 
 // server/routes/rbac.routes.ts
@@ -4785,7 +5346,7 @@ router11.put("/user/profile", async (req, res) => {
       phone,
       address,
       gender,
-      dob: dob ? new Date(dob) : void 0
+      dob: dob ? dob : void 0
     });
     res.json({
       success: true,
@@ -4950,7 +5511,6 @@ router11.patch("/milk-subscription/:id/pause", requireCustomer, async (req, res)
       return res.status(403).json({ message: "Not authorized to pause this subscription" });
     }
     const updated = await storage.updateMilkSubscription(subscriptionId, {
-      isPaused: true,
       status: "PAUSED"
     });
     res.json({ success: true, subscription: updated, message: "Subscription paused successfully" });
@@ -4968,7 +5528,6 @@ router11.patch("/milk-subscription/:id/resume", requireCustomer, async (req, res
       return res.status(403).json({ message: "Not authorized to resume this subscription" });
     }
     const updated = await storage.updateMilkSubscription(subscriptionId, {
-      isPaused: false,
       status: "ACTIVE"
     });
     res.json({ success: true, subscription: updated, message: "Subscription resumed successfully" });
@@ -5017,7 +5576,7 @@ router11.get(["/vendors/dashboard", "/vendor/dashboard", "/vendor/me/dashboard"]
     const metrics = {
       dailyRequirement: vendor.requirementToday || 0,
       weeklyRevenue: vendor.weeklyEarnings || "0.00",
-      fulfillmentRate: vendor.requirementToday > 0 ? (vendor.circulatedLiters / vendor.requirementToday * 100).toFixed(2) : "0.00",
+      fulfillmentRate: (vendor.requirementToday || 0) > 0 ? ((vendor.circulatedLiters || 0) / (vendor.requirementToday || 1) * 100).toFixed(2) : "0.00",
       circulatedLiters: vendor.circulatedLiters || 0,
       revenueToday: vendor.revenueToday || "0.00",
       businessName: vendor.businessName,
@@ -5193,7 +5752,7 @@ router11.post("/admin/update-password", async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "Admin user not found" });
     }
-    await storage.updateUser(user.id, { password: newPassword });
+    await storage.updateUser(user.id, { passwordHash: newPassword });
     res.json({ success: true, message: "Password updated successfully" });
   } catch (error) {
     console.error("Error updating password:", error);
@@ -5349,13 +5908,14 @@ router11.put("/admin/products/:id", requireAdminAccess, async (req, res) => {
     const product = await storage.updateProduct(productId, updates);
     if (updates.stock !== void 0 && existingProduct && existingProduct.stock !== updates.stock) {
       const userId = req.user?.claims?.sub;
-      const quantityDiff = updates.stock - existingProduct.stock;
+      const previousStock = existingProduct.stock || 0;
+      const quantityDiff = updates.stock - previousStock;
       await storage.recordStockMovement({
         productId,
         type: quantityDiff > 0 ? "IN" : "OUT",
         reason: "ADMIN_ADJUST",
         quantity: quantityDiff,
-        previousStock: existingProduct.stock,
+        previousStock,
         newStock: updates.stock,
         createdBy: userId,
         notes: "Manual stock adjustment by admin"
@@ -5507,15 +6067,15 @@ router11.get("/admin/stock-movements/:productId", requireAdmin, async (req, res)
 });
 router11.post("/storage/upload", requireAdmin, async (req, res) => {
   try {
-    const { file, path: path5, data, dataUrl } = req.body;
+    const { file, path: path8, data, dataUrl } = req.body;
     if (dataUrl) {
       const timestamp2 = Date.now();
-      const uniquePath = `${path5}-${timestamp2}`.replace(/\s+/g, "-");
+      const uniquePath = `${path8}-${timestamp2}`.replace(/\s+/g, "-");
       return res.json({ url: dataUrl });
     }
     if (data) {
       const timestamp2 = Date.now();
-      const uniquePath = `${path5}-${timestamp2}`.replace(/\s+/g, "-");
+      const uniquePath = `${path8}-${timestamp2}`.replace(/\s+/g, "-");
       const dataURLPrefix = "data:image/jpeg;base64,";
       return res.json({ url: `${dataURLPrefix}${data}` });
     }
@@ -5793,7 +6353,7 @@ router13.delete("/stats/:id", requireAdminAccess, async (req, res) => {
 });
 router13.get("/faqs/public", async (req, res) => {
   try {
-    const faqList = await db.select().from(faqs2).where(eq14(faqs2.isActive, true)).orderBy(asc3(faqs2.displayOrder));
+    const faqList = await db.select().from(faqs).where(eq14(faqs.isActive, true)).orderBy(asc3(faqs.displayOrder));
     res.json(faqList);
   } catch (error) {
     console.error("Error fetching FAQs:", error);
@@ -5802,7 +6362,7 @@ router13.get("/faqs/public", async (req, res) => {
 });
 router13.get("/faqs", requireAdminAccess, async (req, res) => {
   try {
-    const faqList = await db.select().from(faqs2).orderBy(asc3(faqs2.displayOrder));
+    const faqList = await db.select().from(faqs).orderBy(asc3(faqs.displayOrder));
     res.json(faqList);
   } catch (error) {
     console.error("Error fetching FAQs:", error);
@@ -5812,7 +6372,7 @@ router13.get("/faqs", requireAdminAccess, async (req, res) => {
 router13.post("/faqs", requireAdminAccess, async (req, res) => {
   try {
     const { question, answer, category, displayOrder, isActive } = req.body;
-    const [faq] = await db.insert(faqs2).values({
+    const [faq] = await db.insert(faqs).values({
       question,
       answer,
       category: category || "General",
@@ -5829,7 +6389,7 @@ router13.put("/faqs/:id", requireAdminAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { question, answer, category, displayOrder, isActive } = req.body;
-    const [faq] = await db.update(faqs2).set({ question, answer, category, displayOrder, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq14(faqs2.id, id)).returning();
+    const [faq] = await db.update(faqs).set({ question, answer, category, displayOrder, isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq14(faqs.id, id)).returning();
     if (!faq) return res.status(404).json({ message: "FAQ not found" });
     res.json(faq);
   } catch (error) {
@@ -5840,7 +6400,7 @@ router13.put("/faqs/:id", requireAdminAccess, async (req, res) => {
 router13.delete("/faqs/:id", requireAdminAccess, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const [faq] = await db.delete(faqs2).where(eq14(faqs2.id, id)).returning();
+    const [faq] = await db.delete(faqs).where(eq14(faqs.id, id)).returning();
     if (!faq) return res.status(404).json({ message: "FAQ not found" });
     res.json({ message: "FAQ deleted successfully" });
   } catch (error) {
@@ -6252,9 +6812,9 @@ async function generateDailyDeliveries() {
         await db.insert(subscriptionDeliveries).values({
           subscriptionId: sub.id,
           userId: sub.userId,
-          deliveryDate: new Date(tomorrowStr),
+          deliveryDate: tomorrowStr,
           quantity: sub.quantity,
-          status: "UPCOMING"
+          status: "Pending"
         }).catch(() => null);
       } else if (sub.frequency === "weekly") {
         const dayOfWeek = tomorrow.getDay();
@@ -6262,9 +6822,9 @@ async function generateDailyDeliveries() {
           await db.insert(subscriptionDeliveries).values({
             subscriptionId: sub.id,
             userId: sub.userId,
-            deliveryDate: new Date(tomorrowStr),
+            deliveryDate: tomorrowStr,
             quantity: sub.quantity,
-            status: "UPCOMING"
+            status: "Pending"
           }).catch(() => null);
         }
       } else if (sub.frequency === "alternate") {
@@ -6273,9 +6833,9 @@ async function generateDailyDeliveries() {
           await db.insert(subscriptionDeliveries).values({
             subscriptionId: sub.id,
             userId: sub.userId,
-            deliveryDate: new Date(tomorrowStr),
+            deliveryDate: tomorrowStr,
             quantity: sub.quantity,
-            status: "UPCOMING"
+            status: "Pending"
           }).catch(() => null);
         }
       }
@@ -6296,6 +6856,1005 @@ function startDeliveryScheduler() {
   setInterval(generateDailyDeliveries, midnight());
 }
 
+// server/routes/blog.routes.ts
+init_db();
+init_schema();
+import { Router as Router15 } from "express";
+import { eq as eq18, and as and12, ne as ne2, desc as desc7 } from "drizzle-orm";
+init_schema();
+var router15 = Router15();
+var slugify = (text2) => {
+  return text2.toString().toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w\-]+/g, "").replace(/\-\-+/g, "-").replace(/^-+/, "").replace(/-+$/, "");
+};
+router15.get("/admin/blogs", requireAdminAccess, async (req, res) => {
+  try {
+    const list = await db.select().from(blogs).orderBy(desc7(blogs.createdAt));
+    res.json(list);
+  } catch (error) {
+    console.error("Error listing blogs:", error);
+    res.status(500).json({ message: "Failed to list blogs." });
+  }
+});
+router15.get("/admin/blogs/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [blog] = await db.select().from(blogs).where(eq18(blogs.id, id));
+    if (!blog) return res.status(404).json({ message: "Blog not found." });
+    res.json(blog);
+  } catch (error) {
+    console.error("Error getting blog:", error);
+    res.status(500).json({ message: "Failed to get blog." });
+  }
+});
+router15.post("/admin/blogs", requireAdminAccess, async (req, res) => {
+  try {
+    const parsedData = insertBlogSchema.parse(req.body);
+    let slug = parsedData.slug ? slugify(parsedData.slug) : slugify(parsedData.title);
+    if (!slug) {
+      return res.status(400).json({ message: "A valid title or slug is required to generate the URL." });
+    }
+    const [existing] = await db.select().from(blogs).where(eq18(blogs.slug, slug));
+    if (existing) {
+      return res.status(400).json({ message: "This slug already exists. Please choose another slug." });
+    }
+    const [newBlog] = await db.insert(blogs).values({
+      ...parsedData,
+      slug,
+      status: parsedData.status || "Draft"
+    }).returning();
+    res.status(201).json(newBlog);
+  } catch (error) {
+    console.error("Error creating blog:", error);
+    if (error.name === "ZodError") {
+      return res.status(400).json({ message: "Invalid blog data.", errors: error.errors });
+    }
+    res.status(500).json({ message: "Failed to create blog." });
+  }
+});
+router15.put("/admin/blogs/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const parsedData = insertBlogSchema.partial().parse(req.body);
+    const [blog] = await db.select().from(blogs).where(eq18(blogs.id, id));
+    if (!blog) return res.status(404).json({ message: "Blog not found." });
+    let slug = blog.slug;
+    if (parsedData.slug || parsedData.title) {
+      slug = slugify(parsedData.slug || parsedData.title || "");
+      const [existing] = await db.select().from(blogs).where(and12(eq18(blogs.slug, slug), ne2(blogs.id, id)));
+      if (existing) {
+        return res.status(400).json({ message: "This slug already exists. Please choose another slug." });
+      }
+    }
+    const [updatedBlog] = await db.update(blogs).set({
+      ...parsedData,
+      slug,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq18(blogs.id, id)).returning();
+    res.json(updatedBlog);
+  } catch (error) {
+    console.error("Error updating blog:", error);
+    if (error.name === "ZodError") {
+      return res.status(400).json({ message: "Invalid blog data.", errors: error.errors });
+    }
+    res.status(500).json({ message: "Failed to update blog." });
+  }
+});
+router15.delete("/admin/blogs/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const deleted = await db.delete(blogs).where(eq18(blogs.id, id)).returning();
+    if (!deleted.length) return res.status(404).json({ message: "Blog not found." });
+    res.json({ success: true, message: "Blog deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting blog:", error);
+    res.status(500).json({ message: "Failed to delete blog." });
+  }
+});
+router15.get("/blogs", async (req, res) => {
+  try {
+    const search = req.query.search;
+    let list = await db.select().from(blogs).where(eq18(blogs.status, "Published")).orderBy(desc7(blogs.createdAt));
+    if (search) {
+      const searchLower = search.toLowerCase();
+      list = list.filter(
+        (b) => b.title.toLowerCase().includes(searchLower) || b.shortDescription.toLowerCase().includes(searchLower) || b.content.toLowerCase().includes(searchLower)
+      );
+    }
+    res.json(list);
+  } catch (error) {
+    console.error("Error fetching public blogs:", error);
+    res.status(500).json({ message: "Failed to fetch blogs." });
+  }
+});
+router15.get("/blogs/:slug", async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    const [blog] = await db.select().from(blogs).where(and12(eq18(blogs.slug, slug), eq18(blogs.status, "Published")));
+    if (!blog) return res.status(404).json({ message: "Blog article not found." });
+    const allBlogs = await db.select().from(blogs).where(and12(eq18(blogs.status, "Published"), ne2(blogs.id, blog.id))).limit(3);
+    res.json({ blog, related: allBlogs });
+  } catch (error) {
+    console.error("Error fetching public blog detail:", error);
+    res.status(500).json({ message: "Failed to fetch blog article." });
+  }
+});
+var blog_routes_default = router15;
+
+// server/routes/video-blog.routes.ts
+init_db();
+init_schema();
+import { Router as Router16 } from "express";
+import { eq as eq19, and as and13, ne as ne3, desc as desc8 } from "drizzle-orm";
+init_schema();
+var router16 = Router16();
+var slugify2 = (text2) => {
+  return text2.toString().toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w\-]+/g, "").replace(/\-\-+/g, "-").replace(/^-+/, "").replace(/-+$/, "");
+};
+var convertToEmbedUrl = (url, type) => {
+  if (!url) return "";
+  const typeLower = type.toLowerCase();
+  if (typeLower === "youtube") {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    if (match && match[2].length === 11) {
+      return `https://www.youtube.com/embed/${match[2]}`;
+    }
+  } else if (typeLower === "vimeo") {
+    const regExp = /vimeo\.com\/(?:video\/)?([0-9]+)/;
+    const match = url.match(regExp);
+    if (match) {
+      return `https://player.vimeo.com/video/${match[1]}`;
+    }
+  }
+  return url;
+};
+router16.get("/admin/video-blogs", requireAdminAccess, async (req, res) => {
+  try {
+    const list = await db.select().from(videoBlogs).orderBy(desc8(videoBlogs.createdAt));
+    res.json(list);
+  } catch (error) {
+    console.error("Error listing video blogs:", error);
+    res.status(500).json({ message: "Failed to list video blogs." });
+  }
+});
+router16.get("/admin/video-blogs/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [blog] = await db.select().from(videoBlogs).where(eq19(videoBlogs.id, id));
+    if (!blog) return res.status(404).json({ message: "Video blog not found." });
+    res.json(blog);
+  } catch (error) {
+    console.error("Error getting video blog:", error);
+    res.status(500).json({ message: "Failed to get video blog." });
+  }
+});
+router16.post("/admin/video-blogs", requireAdminAccess, async (req, res) => {
+  try {
+    const parsedData = insertVideoBlogSchema.parse(req.body);
+    let slug = parsedData.slug ? slugify2(parsedData.slug) : slugify2(parsedData.title);
+    if (!slug) {
+      return res.status(400).json({ message: "A valid title or slug is required to generate the URL." });
+    }
+    const [existing] = await db.select().from(videoBlogs).where(eq19(videoBlogs.slug, slug));
+    if (existing) {
+      return res.status(400).json({ message: "This slug already exists. Please choose another slug." });
+    }
+    let videoUrl = parsedData.videoUrl || "";
+    if (parsedData.videoType) {
+      videoUrl = convertToEmbedUrl(videoUrl, parsedData.videoType);
+    }
+    const [newBlog] = await db.insert(videoBlogs).values({
+      ...parsedData,
+      slug,
+      videoUrl,
+      status: parsedData.status || "Draft"
+    }).returning();
+    res.status(201).json(newBlog);
+  } catch (error) {
+    console.error("Error creating video blog:", error);
+    if (error.name === "ZodError") {
+      return res.status(400).json({ message: "Invalid video blog data.", errors: error.errors });
+    }
+    res.status(500).json({ message: "Failed to create video blog." });
+  }
+});
+router16.put("/admin/video-blogs/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const parsedData = insertVideoBlogSchema.partial().parse(req.body);
+    const [blog] = await db.select().from(videoBlogs).where(eq19(videoBlogs.id, id));
+    if (!blog) return res.status(404).json({ message: "Video blog not found." });
+    let slug = blog.slug;
+    if (parsedData.slug || parsedData.title) {
+      slug = slugify2(parsedData.slug || parsedData.title || "");
+      const [existing] = await db.select().from(videoBlogs).where(and13(eq19(videoBlogs.slug, slug), ne3(videoBlogs.id, id)));
+      if (existing) {
+        return res.status(400).json({ message: "This slug already exists. Please choose another slug." });
+      }
+    }
+    let videoUrl = parsedData.videoUrl !== void 0 ? parsedData.videoUrl : blog.videoUrl;
+    const videoType = parsedData.videoType || blog.videoType;
+    if (videoUrl && videoType) {
+      videoUrl = convertToEmbedUrl(videoUrl, videoType);
+    }
+    const [updatedBlog] = await db.update(videoBlogs).set({
+      ...parsedData,
+      slug,
+      videoUrl,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq19(videoBlogs.id, id)).returning();
+    res.json(updatedBlog);
+  } catch (error) {
+    console.error("Error updating video blog:", error);
+    if (error.name === "ZodError") {
+      return res.status(400).json({ message: "Invalid video blog data.", errors: error.errors });
+    }
+    res.status(500).json({ message: "Failed to update video blog." });
+  }
+});
+router16.delete("/admin/video-blogs/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const deleted = await db.delete(videoBlogs).where(eq19(videoBlogs.id, id)).returning();
+    if (!deleted.length) return res.status(404).json({ message: "Video blog not found." });
+    res.json({ success: true, message: "Video blog deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting video blog:", error);
+    res.status(500).json({ message: "Failed to delete video blog." });
+  }
+});
+router16.get("/video-blogs", async (req, res) => {
+  try {
+    const search = req.query.search;
+    let list = await db.select().from(videoBlogs).where(eq19(videoBlogs.status, "Published")).orderBy(desc8(videoBlogs.createdAt));
+    if (search) {
+      const searchLower = search.toLowerCase();
+      list = list.filter(
+        (b) => b.title.toLowerCase().includes(searchLower) || b.shortDescription.toLowerCase().includes(searchLower) || b.content && b.content.toLowerCase().includes(searchLower)
+      );
+    }
+    res.json(list);
+  } catch (error) {
+    console.error("Error fetching public video blogs:", error);
+    res.status(500).json({ message: "Failed to fetch video blogs." });
+  }
+});
+router16.get("/video-blogs/:slug", async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    const [blog] = await db.select().from(videoBlogs).where(and13(eq19(videoBlogs.slug, slug), eq19(videoBlogs.status, "Published")));
+    if (!blog) return res.status(404).json({ message: "Video blog not found." });
+    const allBlogs = await db.select().from(videoBlogs).where(and13(eq19(videoBlogs.status, "Published"), ne3(videoBlogs.id, blog.id))).limit(3);
+    res.json({ blog, related: allBlogs });
+  } catch (error) {
+    console.error("Error fetching public video blog detail:", error);
+    res.status(500).json({ message: "Failed to fetch video blog." });
+  }
+});
+var video_blog_routes_default = router16;
+
+// server/routes/image-gallery.routes.ts
+init_db();
+init_schema();
+import { Router as Router17 } from "express";
+import { eq as eq20, desc as desc9, asc as asc4 } from "drizzle-orm";
+init_schema();
+var router17 = Router17();
+router17.get("/admin/image-gallery", requireAdminAccess, async (req, res) => {
+  try {
+    const list = await db.select().from(imageGallery).orderBy(asc4(imageGallery.sortOrder), desc9(imageGallery.createdAt));
+    res.json(list);
+  } catch (error) {
+    console.error("Error listing gallery images:", error);
+    res.status(500).json({ message: "Failed to list gallery images." });
+  }
+});
+router17.get("/admin/image-gallery/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [item] = await db.select().from(imageGallery).where(eq20(imageGallery.id, id));
+    if (!item) return res.status(404).json({ message: "Image not found." });
+    res.json(item);
+  } catch (error) {
+    console.error("Error getting gallery image:", error);
+    res.status(500).json({ message: "Failed to get gallery image." });
+  }
+});
+router17.post("/admin/image-gallery", requireAdminAccess, async (req, res) => {
+  try {
+    const parsedData = insertImageGallerySchema.parse(req.body);
+    const [newItem] = await db.insert(imageGallery).values(parsedData).returning();
+    res.status(201).json(newItem);
+  } catch (error) {
+    console.error("Error creating gallery image:", error);
+    if (error.name === "ZodError") {
+      return res.status(400).json({ message: "Invalid gallery image data.", errors: error.errors });
+    }
+    res.status(500).json({ message: "Failed to create gallery image." });
+  }
+});
+router17.put("/admin/image-gallery/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const parsedData = insertImageGallerySchema.partial().parse(req.body);
+    const [updated] = await db.update(imageGallery).set(parsedData).where(eq20(imageGallery.id, id)).returning();
+    if (!updated) return res.status(404).json({ message: "Image not found." });
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating gallery image:", error);
+    if (error.name === "ZodError") {
+      return res.status(400).json({ message: "Invalid gallery image data.", errors: error.errors });
+    }
+    res.status(500).json({ message: "Failed to update gallery image." });
+  }
+});
+router17.delete("/admin/image-gallery/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const deleted = await db.delete(imageGallery).where(eq20(imageGallery.id, id)).returning();
+    if (!deleted.length) return res.status(404).json({ message: "Image not found." });
+    res.json({ success: true, message: "Gallery image deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting gallery image:", error);
+    res.status(500).json({ message: "Failed to delete gallery image." });
+  }
+});
+router17.get("/image-gallery", async (req, res) => {
+  try {
+    const list = await db.select().from(imageGallery).where(eq20(imageGallery.status, "Published")).orderBy(asc4(imageGallery.sortOrder), desc9(imageGallery.createdAt));
+    res.json(list);
+  } catch (error) {
+    console.error("Error fetching public gallery images:", error);
+    res.status(500).json({ message: "Failed to fetch gallery images." });
+  }
+});
+var image_gallery_routes_default = router17;
+
+// server/routes/video-gallery.routes.ts
+init_db();
+init_schema();
+import { Router as Router18 } from "express";
+import { eq as eq21, desc as desc10, asc as asc5 } from "drizzle-orm";
+init_schema();
+var router18 = Router18();
+var convertToEmbedUrl2 = (url, type) => {
+  if (!url) return "";
+  const typeLower = type.toLowerCase();
+  if (typeLower === "youtube") {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    if (match && match[2].length === 11) {
+      return `https://www.youtube.com/embed/${match[2]}`;
+    }
+  } else if (typeLower === "vimeo") {
+    const regExp = /vimeo\.com\/(?:video\/)?([0-9]+)/;
+    const match = url.match(regExp);
+    if (match) {
+      return `https://player.vimeo.com/video/${match[1]}`;
+    }
+  }
+  return url;
+};
+router18.get("/admin/video-gallery", requireAdminAccess, async (req, res) => {
+  try {
+    const list = await db.select().from(videoGallery).orderBy(asc5(videoGallery.sortOrder), desc10(videoGallery.createdAt));
+    res.json(list);
+  } catch (error) {
+    console.error("Error listing gallery videos:", error);
+    res.status(500).json({ message: "Failed to list gallery videos." });
+  }
+});
+router18.get("/admin/video-gallery/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [item] = await db.select().from(videoGallery).where(eq21(videoGallery.id, id));
+    if (!item) return res.status(404).json({ message: "Video not found." });
+    res.json(item);
+  } catch (error) {
+    console.error("Error getting gallery video:", error);
+    res.status(500).json({ message: "Failed to get gallery video." });
+  }
+});
+router18.post("/admin/video-gallery", requireAdminAccess, async (req, res) => {
+  try {
+    const parsedData = insertVideoGallerySchema.parse(req.body);
+    let videoUrl = parsedData.videoUrl || "";
+    if (parsedData.videoType) {
+      videoUrl = convertToEmbedUrl2(videoUrl, parsedData.videoType);
+    }
+    const [newItem] = await db.insert(videoGallery).values({
+      ...parsedData,
+      videoUrl
+    }).returning();
+    res.status(201).json(newItem);
+  } catch (error) {
+    console.error("Error creating gallery video:", error);
+    if (error.name === "ZodError") {
+      return res.status(400).json({ message: "Invalid gallery video data.", errors: error.errors });
+    }
+    res.status(500).json({ message: "Failed to create gallery video." });
+  }
+});
+router18.put("/admin/video-gallery/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const parsedData = insertVideoGallerySchema.partial().parse(req.body);
+    const [item] = await db.select().from(videoGallery).where(eq21(videoGallery.id, id));
+    if (!item) return res.status(404).json({ message: "Video not found." });
+    let videoUrl = parsedData.videoUrl !== void 0 ? parsedData.videoUrl : item.videoUrl;
+    const videoType = parsedData.videoType || item.videoType;
+    if (videoUrl && videoType) {
+      videoUrl = convertToEmbedUrl2(videoUrl, videoType);
+    }
+    const [updated] = await db.update(videoGallery).set({
+      ...parsedData,
+      videoUrl
+    }).where(eq21(videoGallery.id, id)).returning();
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating gallery video:", error);
+    if (error.name === "ZodError") {
+      return res.status(400).json({ message: "Invalid gallery video data.", errors: error.errors });
+    }
+    res.status(500).json({ message: "Failed to update gallery video." });
+  }
+});
+router18.delete("/admin/video-gallery/:id", requireAdminAccess, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const deleted = await db.delete(videoGallery).where(eq21(videoGallery.id, id)).returning();
+    if (!deleted.length) return res.status(404).json({ message: "Video not found." });
+    res.json({ success: true, message: "Gallery video deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting gallery video:", error);
+    res.status(500).json({ message: "Failed to delete gallery video." });
+  }
+});
+router18.get("/video-gallery", async (req, res) => {
+  try {
+    const list = await db.select().from(videoGallery).where(eq21(videoGallery.status, "Published")).orderBy(asc5(videoGallery.sortOrder), desc10(videoGallery.createdAt));
+    res.json(list);
+  } catch (error) {
+    console.error("Error fetching public gallery videos:", error);
+    res.status(500).json({ message: "Failed to fetch gallery videos." });
+  }
+});
+var video_gallery_routes_default = router18;
+
+// server/routes/media.routes.ts
+import { Router as Router19 } from "express";
+import path2 from "path";
+import fs2 from "fs";
+var router19 = Router19();
+router19.post("/upload", requireAdminAccess, async (req, res) => {
+  try {
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return res.status(400).json({ message: "No files were uploaded." });
+    }
+    const fileKey = req.files.file ? "file" : req.files.image ? "image" : req.files.video ? "video" : Object.keys(req.files)[0];
+    const uploadedFile = req.files[fileKey];
+    if (!uploadedFile) {
+      return res.status(400).json({ message: "No valid file found in request." });
+    }
+    const ext = path2.extname(uploadedFile.name).toLowerCase();
+    const allowedImageExts = [".jpg", ".jpeg", ".png", ".webp"];
+    const allowedVideoExts = [".mp4", ".webm", ".mov"];
+    const allowedDocExts = [".pdf"];
+    const isImage = allowedImageExts.includes(ext);
+    const isVideo = allowedVideoExts.includes(ext);
+    const isDoc = allowedDocExts.includes(ext);
+    if (!isImage && !isVideo && !isDoc) {
+      return res.status(400).json({
+        message: "Invalid file type. Supported: jpg, jpeg, png, webp, mp4, webm, mov, pdf."
+      });
+    }
+    const sanitizedName = uploadedFile.name.replace(/[^a-zA-Z0-9.-]+/g, "_");
+    const fileName = `${Date.now()}_${sanitizedName}`;
+    const uploadDir = path2.join(process.cwd(), "public", "uploads");
+    const uploadPath = path2.join(uploadDir, fileName);
+    if (!fs2.existsSync(uploadDir)) {
+      fs2.mkdirSync(uploadDir, { recursive: true });
+    }
+    await uploadedFile.mv(uploadPath);
+    const publicUrl = `/uploads/${fileName}`;
+    res.json({
+      url: publicUrl,
+      type: isImage ? "image" : isVideo ? "video" : "pdf",
+      name: uploadedFile.name,
+      size: uploadedFile.size
+    });
+  } catch (error) {
+    console.error("Media upload error:", error);
+    res.status(500).json({ message: "Failed to upload file." });
+  }
+});
+router19.post("/upload-screenshot", async (req, res) => {
+  try {
+    const userId = req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return res.status(400).json({ message: "No file uploaded." });
+    }
+    const fileKey = req.files.file ? "file" : req.files.screenshot ? "screenshot" : req.files.image ? "image" : Object.keys(req.files)[0];
+    const uploadedFile = req.files[fileKey];
+    if (!uploadedFile) {
+      return res.status(400).json({ message: "No valid file found." });
+    }
+    const ext = path2.extname(uploadedFile.name).toLowerCase();
+    const allowedExts = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
+    if (!allowedExts.includes(ext)) {
+      return res.status(400).json({ message: "Invalid file type. Use jpg, png, webp or pdf." });
+    }
+    const sanitizedName = uploadedFile.name.replace(/[^a-zA-Z0-9.-]+/g, "_");
+    const fileName = `screenshot_${Date.now()}_${sanitizedName}`;
+    const uploadDir = path2.join(process.cwd(), "public", "uploads");
+    const uploadPath = path2.join(uploadDir, fileName);
+    if (!fs2.existsSync(uploadDir)) {
+      fs2.mkdirSync(uploadDir, { recursive: true });
+    }
+    await uploadedFile.mv(uploadPath);
+    res.json({ url: `/uploads/${fileName}`, name: uploadedFile.name });
+  } catch (error) {
+    console.error("Screenshot upload error:", error);
+    res.status(500).json({ message: "Failed to upload screenshot." });
+  }
+});
+var media_routes_default = router19;
+
+// server/routes/admin-users.routes.ts
+import { Router as Router20 } from "express";
+import bcryptjs2 from "bcryptjs";
+import { nanoid as nanoid2 } from "nanoid";
+
+// server/utils/mail.ts
+import fs3 from "fs";
+import path3 from "path";
+async function sendEmail({ to, subject, body }) {
+  console.log(`\u2709\uFE0F [MOCK EMAIL SENT]`);
+  console.log(`To: ${to}`);
+  console.log(`Subject: ${subject}`);
+  console.log(`Body:
+${body}`);
+  console.log(`-----------------------------------`);
+  try {
+    const logFilePath = path3.join(process.cwd(), "email_logs.json");
+    let logs = [];
+    if (fs3.existsSync(logFilePath)) {
+      try {
+        const fileContent = fs3.readFileSync(logFilePath, "utf-8");
+        logs = JSON.parse(fileContent);
+      } catch (e) {
+        logs = [];
+      }
+    }
+    logs.push({
+      to,
+      subject,
+      body,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    fs3.writeFileSync(logFilePath, JSON.stringify(logs, null, 2), "utf-8");
+    console.log(`Saved email log entry to email_logs.json`);
+  } catch (error) {
+    console.error("Failed to write to email_logs.json:", error);
+  }
+}
+
+// server/routes/admin-users.routes.ts
+import crypto from "crypto";
+var router20 = Router20();
+router20.use(requireAdminAccess);
+router20.get("/", async (req, res) => {
+  try {
+    const usersList = await storage.getAllUsers();
+    const resetRequests = await storage.getPasswordResetRequests();
+    const mappedUsers = usersList.map((user) => {
+      const pendingRequest = resetRequests.find(
+        (req2) => req2.userId === user.id && req2.status === "pending"
+      );
+      return {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        address: user.address,
+        role: user.role,
+        isActive: user.isActive,
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt,
+        hasPendingReset: !!pendingRequest,
+        pendingResetId: pendingRequest?.id || null
+      };
+    });
+    res.json(mappedUsers);
+  } catch (error) {
+    console.error("Get all users error:", error);
+    res.status(500).json({ message: "Failed to fetch users" });
+  }
+});
+router20.post("/:id/block", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (user.role === "admin") {
+      return res.status(400).json({ message: "Cannot block admin accounts" });
+    }
+    await storage.updateUser(userId, { isActive: false });
+    res.json({ message: "User blocked successfully" });
+  } catch (error) {
+    console.error("Block user error:", error);
+    res.status(500).json({ message: "Failed to block user" });
+  }
+});
+router20.post("/:id/unblock", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    await storage.updateUser(userId, { isActive: true });
+    res.json({ message: "User unblocked successfully" });
+  } catch (error) {
+    console.error("Unblock user error:", error);
+    res.status(500).json({ message: "Failed to unblock user" });
+  }
+});
+router20.post("/:id/reset-password", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const tempPassword = nanoid2(10);
+    const salt = await bcryptjs2.genSalt(10);
+    const passwordHash = await bcryptjs2.hash(tempPassword, salt);
+    await storage.updateUser(userId, { passwordHash });
+    const resetRequests = await storage.getPasswordResetRequests();
+    const pendingRequest = resetRequests.find(
+      (r) => r.userId === userId && r.status === "pending"
+    );
+    if (pendingRequest) {
+      await storage.updatePasswordResetRequestStatus(pendingRequest.id, "resolved", /* @__PURE__ */ new Date());
+    }
+    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email;
+    await sendEmail({
+      to: user.email || "",
+      subject: "Your Login Password Has Been Reset",
+      body: `Hello ${fullName},
+
+Your login details have been updated by the admin.
+
+Login Email: ${user.email}
+Temporary Password: ${tempPassword}
+
+Please login and change your password from your profile section immediately.
+
+Thank you.`
+    });
+    res.json({
+      message: "Temporary password generated and email sent",
+      tempPassword
+    });
+  } catch (error) {
+    console.error("Generate temp password error:", error);
+    res.status(500).json({ message: "Failed to generate temporary password" });
+  }
+});
+router20.post("/:id/reset-link", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1e3);
+    await storage.createPasswordResetToken({
+      userId,
+      tokenHash: token,
+      expiresAt,
+      used: false
+    });
+    const resetRequests = await storage.getPasswordResetRequests();
+    const pendingRequest = resetRequests.find(
+      (r) => r.userId === userId && r.status === "pending"
+    );
+    if (pendingRequest) {
+      await storage.updatePasswordResetRequestStatus(pendingRequest.id, "resolved", /* @__PURE__ */ new Date());
+    }
+    const protocol = req.secure ? "https" : "http";
+    const resetUrl = `${protocol}://${req.get("host")}/auth/reset-password?token=${token}`;
+    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email;
+    await sendEmail({
+      to: user.email || "",
+      subject: "Password Reset Request",
+      body: `Hello ${fullName},
+
+You are receiving this because you (or the admin) requested a password reset for your account.
+
+Please click on the following link, or paste this into your browser to complete the process:
+${resetUrl}
+
+This link is valid for 15 minutes. If you did not request this, please ignore this email.
+
+Thank you.`
+    });
+    res.json({ message: "Password reset link sent successfully" });
+  } catch (error) {
+    console.error("Send reset link error:", error);
+    res.status(500).json({ message: "Failed to send reset link" });
+  }
+});
+var admin_users_routes_default = router20;
+
+// server/routes/password-reset.routes.ts
+import { Router as Router21 } from "express";
+import bcryptjs3 from "bcryptjs";
+var router21 = Router21();
+router21.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    const user = await storage.getUserByEmail(email);
+    if (!user) {
+      return res.json({
+        message: "Your password reset request has been sent to admin. You will receive help soon."
+      });
+    }
+    await storage.createPasswordResetRequest({
+      userId: user.id,
+      email: user.email || email,
+      status: "pending"
+    });
+    res.json({
+      message: "Your password reset request has been sent to admin. You will receive help soon."
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({ message: "Failed to submit request" });
+  }
+});
+router21.post("/reset-password", async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: "Token and new password are required" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+    const tokenRecord = await storage.getPasswordResetToken(token);
+    if (!tokenRecord) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+    if (tokenRecord.used) {
+      return res.status(400).json({ message: "Token has already been used" });
+    }
+    const now = /* @__PURE__ */ new Date();
+    if (now > tokenRecord.expiresAt) {
+      return res.status(400).json({ message: "Token has expired" });
+    }
+    const salt = await bcryptjs3.genSalt(10);
+    const passwordHash = await bcryptjs3.hash(newPassword, salt);
+    await storage.updateUser(tokenRecord.userId, { passwordHash });
+    await storage.markPasswordResetTokenUsed(tokenRecord.id);
+    res.json({ message: "Password has been successfully updated" });
+  } catch (error) {
+    console.error("Reset password token error:", error);
+    res.status(500).json({ message: "Failed to reset password" });
+  }
+});
+router21.get("/admin/password-requests", requireAdminAccess, async (req, res) => {
+  try {
+    const requests = await storage.getPasswordResetRequests();
+    const enrichedRequests = [];
+    for (const request of requests) {
+      const user = await storage.getUser(request.userId);
+      enrichedRequests.push({
+        ...request,
+        userName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "Unknown",
+        userEmail: user?.email || request.email
+      });
+    }
+    res.json(enrichedRequests);
+  } catch (error) {
+    console.error("Get password requests error:", error);
+    res.status(500).json({ message: "Failed to fetch requests" });
+  }
+});
+var password_reset_routes_default = router21;
+
+// server/routes/chat.routes.ts
+import { Router as Router22 } from "express";
+import path4 from "path";
+import fs4 from "fs";
+var router22 = Router22();
+router22.get("/thread", async (req, res) => {
+  try {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    const thread = await storage.getOrCreateChatThread(req.session.userId);
+    await storage.resetUnreadCount(thread.id, "user");
+    res.json(thread);
+  } catch (error) {
+    console.error("Get thread error:", error);
+    res.status(500).json({ message: "Failed to fetch chat thread" });
+  }
+});
+router22.post("/guest-thread", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    const user = await storage.getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ message: "Account not found with this email" });
+    }
+    const thread = await storage.getOrCreateChatThread(user.id);
+    await storage.resetUnreadCount(thread.id, "user");
+    res.json(thread);
+  } catch (error) {
+    console.error("Guest thread error:", error);
+    res.status(500).json({ message: "Failed to start chat session" });
+  }
+});
+router22.get("/thread/:id/messages", async (req, res) => {
+  try {
+    const threadId = parseInt(req.params.id);
+    if (isNaN(threadId)) {
+      return res.status(400).json({ message: "Invalid thread ID" });
+    }
+    const thread = await storage.getChatThreadById(threadId);
+    if (!thread) {
+      return res.status(404).json({ message: "Thread not found" });
+    }
+    const isAdmin = req.session?.isAdminLoggedIn;
+    const isOwner = req.session?.userId === thread.userId;
+    if (!isAdmin && !isOwner && !req.query.isGuest) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    if (isAdmin) {
+      await storage.resetUnreadCount(threadId, "admin");
+    } else {
+      await storage.resetUnreadCount(threadId, "user");
+    }
+    const messages = await storage.getChatMessages(threadId);
+    res.json(messages);
+  } catch (error) {
+    console.error("Get messages error:", error);
+    res.status(500).json({ message: "Failed to fetch messages" });
+  }
+});
+router22.post("/upload", async (req, res) => {
+  try {
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return res.status(400).json({ message: "No files were uploaded." });
+    }
+    const fileKey = req.files.file ? "file" : req.files.image ? "image" : Object.keys(req.files)[0];
+    const uploadedFile = req.files[fileKey];
+    if (!uploadedFile) {
+      return res.status(400).json({ message: "No valid file found in request." });
+    }
+    const MAX_SIZE = 500 * 1024;
+    if (uploadedFile.size > MAX_SIZE) {
+      return res.status(400).json({ message: "File size exceeds the 500KB limit." });
+    }
+    const ext = path4.extname(uploadedFile.name).toLowerCase();
+    const allowedExts = [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".gif",
+      ".webp",
+      ".pdf",
+      ".doc",
+      ".docx",
+      ".xls",
+      ".xlsx",
+      ".txt"
+    ];
+    if (!allowedExts.includes(ext)) {
+      return res.status(400).json({
+        message: "Invalid file type. Supported: images, pdf, doc, docx, xls, xlsx, txt."
+      });
+    }
+    const sanitizedName = uploadedFile.name.replace(/[^a-zA-Z0-9.-]+/g, "_");
+    const fileName = `chat_${Date.now()}_${sanitizedName}`;
+    const uploadDir = path4.join(process.cwd(), "public", "uploads");
+    const uploadPath = path4.join(uploadDir, fileName);
+    if (!fs4.existsSync(uploadDir)) {
+      fs4.mkdirSync(uploadDir, { recursive: true });
+    }
+    await uploadedFile.mv(uploadPath);
+    const publicUrl = `/uploads/${fileName}`;
+    res.json({
+      url: publicUrl,
+      name: uploadedFile.name
+    });
+  } catch (error) {
+    console.error("Chat upload error:", error);
+    res.status(500).json({ message: "Failed to upload file." });
+  }
+});
+router22.post("/thread/:id/messages", async (req, res) => {
+  try {
+    const threadId = parseInt(req.params.id);
+    const { message, fileUrl, fileName } = req.body;
+    if (isNaN(threadId) || (!message || !message.trim()) && !fileUrl) {
+      return res.status(400).json({ message: "Invalid message data" });
+    }
+    const thread = await storage.getChatThreadById(threadId);
+    if (!thread) {
+      return res.status(404).json({ message: "Thread not found" });
+    }
+    const isAdmin = req.session?.isAdminLoggedIn;
+    const senderRole = isAdmin ? "admin" : "user";
+    const senderId = isAdmin ? null : req.session?.userId || thread.userId;
+    const newMessage = await storage.createChatMessage({
+      threadId,
+      senderId,
+      senderRole,
+      message: message?.trim() || fileName || "Attachment",
+      isRead: false,
+      fileUrl: fileUrl || null,
+      fileName: fileName || null
+    });
+    if (isAdmin) {
+      await storage.updateChatThreadStatus(threadId, "active");
+      await storage.incrementUnreadCount(threadId, "user");
+    } else {
+      await storage.updateChatThreadStatus(threadId, "pending");
+      await storage.incrementUnreadCount(threadId, "admin");
+    }
+    res.json(newMessage);
+  } catch (error) {
+    console.error("Post message error:", error);
+    res.status(500).json({ message: "Failed to post message" });
+  }
+});
+router22.get("/admin/threads", requireAdminAccess, async (req, res) => {
+  try {
+    const threads = await storage.getChatThreads();
+    res.json(threads);
+  } catch (error) {
+    console.error("Get admin threads error:", error);
+    res.status(500).json({ message: "Failed to fetch threads" });
+  }
+});
+router22.post("/admin/threads/:id/resolve", requireAdminAccess, async (req, res) => {
+  try {
+    const threadId = parseInt(req.params.id);
+    if (isNaN(threadId)) {
+      return res.status(400).json({ message: "Invalid thread ID" });
+    }
+    const updated = await storage.updateChatThreadStatus(threadId, "resolved");
+    await storage.createChatMessage({
+      threadId,
+      senderId: null,
+      senderRole: "admin",
+      message: "This chat has been marked as resolved by the admin. Feel free to send another message if you need further help.",
+      isRead: true
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error("Resolve thread error:", error);
+    res.status(500).json({ message: "Failed to resolve thread" });
+  }
+});
+var chat_routes_default = router22;
+
 // server/routes.ts
 async function registerRoutes(app2) {
   await setupAuth(app2);
@@ -6305,15 +7864,46 @@ async function registerRoutes(app2) {
   app2.use("/api/cart", cart_routes_default);
   app2.use("/api/addresses", address_routes_default);
   app2.use("/api/orders", order_routes_default);
+  app2.use("/api/admin/users", admin_users_routes_default);
+  app2.use("/api/auth", password_reset_routes_default);
+  app2.use("/api/chat", chat_routes_default);
   app2.get("/api/admin/orders", requireAdminAccess, async (req, res) => {
     try {
-      const { orders: orders2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { orders: orders2, users: users4, orderItems: orderItems2, products: products4 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const { eq: eq27, inArray: inArray2 } = await import("drizzle-orm");
       const status = req.query.status;
       let allOrders = await db2.select().from(orders2);
-      if (status) allOrders = allOrders.filter((o) => o.status === status);
-      res.json(allOrders);
+      if (status) {
+        allOrders = allOrders.filter((o) => o.status === status);
+      }
+      const orderIds = allOrders.map((o) => o.id);
+      const allItems = orderIds.length ? await db2.select({ item: orderItems2, product: products4 }).from(orderItems2).leftJoin(products4, eq27(orderItems2.productId, products4.id)).where(inArray2(orderItems2.orderId, orderIds)) : [];
+      const itemsMap = /* @__PURE__ */ new Map();
+      for (const row of allItems) {
+        if (!row.item.orderId) continue;
+        const current = itemsMap.get(row.item.orderId) || [];
+        current.push({
+          ...row.item,
+          product: row.product
+        });
+        itemsMap.set(row.item.orderId, current);
+      }
+      const withDetails = await Promise.all(
+        allOrders.map(async (order) => {
+          let customer = null;
+          if (order.userId) {
+            customer = await db2.query.users.findFirst({
+              where: eq27(users4.id, order.userId)
+            });
+          }
+          const items = itemsMap.get(order.id) || [];
+          return { ...order, customer, items };
+        })
+      );
+      res.json(withDetails);
     } catch (error) {
+      console.error("Error fetching orders:", error);
       res.status(500).json({ message: "Failed to fetch orders" });
     }
   });
@@ -6321,7 +7911,7 @@ async function registerRoutes(app2) {
     try {
       const { orders: orders2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-      const { eq: eq23 } = await import("drizzle-orm");
+      const { eq: eq27 } = await import("drizzle-orm");
       const orderId = parseInt(req.params.id);
       const { status, paymentStatus } = req.body;
       const updated = await storage.updateOrderStatus(orderId, status);
@@ -6337,10 +7927,10 @@ async function registerRoutes(app2) {
     try {
       const { orders: orders2, orderItems: orderItems2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-      const { eq: eq23 } = await import("drizzle-orm");
+      const { eq: eq27 } = await import("drizzle-orm");
       const orderId = parseInt(req.params.id);
-      await db2.delete(orderItems2).where(eq23(orderItems2.orderId, orderId));
-      const deleted = await db2.delete(orders2).where(eq23(orders2.id, orderId)).returning();
+      await db2.delete(orderItems2).where(eq27(orderItems2.orderId, orderId));
+      const deleted = await db2.delete(orders2).where(eq27(orders2.id, orderId)).returning();
       if (!deleted.length) return res.status(404).json({ message: "Order not found" });
       res.json({ success: true, message: "Order deleted successfully" });
     } catch (error) {
@@ -6357,6 +7947,38 @@ async function registerRoutes(app2) {
   app2.use("/api/banners", banners_routes_default);
   app2.use("/api/homepage", homepage_routes_default);
   app2.use("/api/cms", cms_routes_default);
+  app2.use("/api", blog_routes_default);
+  app2.use("/api", video_blog_routes_default);
+  app2.use("/api", image_gallery_routes_default);
+  app2.use("/api", video_gallery_routes_default);
+  app2.use("/api/admin/media", media_routes_default);
+  app2.use("/api/media", media_routes_default);
+  app2.post("/api/billing/:billId/submit-screenshot", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const billId = parseInt(req.params.billId);
+      const { screenshotUrl } = req.body;
+      if (!screenshotUrl) return res.status(400).json({ message: "screenshotUrl is required" });
+      const { bills: bills2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { eq: eq27 } = await import("drizzle-orm");
+      const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const bill = await db2.select().from(bills2).where(eq27(bills2.id, billId));
+      if (!bill.length || bill[0].userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      const updated = await db2.update(bills2).set({
+        paymentScreenshotUrl: screenshotUrl,
+        paymentScreenshotStatus: "pending_review",
+        paymentScreenshotUploadedAt: /* @__PURE__ */ new Date(),
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(eq27(bills2.id, billId)).returning();
+      res.json({ success: true, bill: updated[0] });
+    } catch (error) {
+      console.error("Error submitting screenshot:", error);
+      res.status(500).json({ message: "Failed to submit screenshot" });
+    }
+  });
   app2.use("/api", rbac_routes_default);
   app2.get("/api/auth/user", async (req, res) => {
     try {
@@ -6406,9 +8028,9 @@ async function registerRoutes(app2) {
       const userId = req.session?.userId;
       const isAdmin = req.session?.isAdminLoggedIn;
       const { bills: bills2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq23 } = await import("drizzle-orm");
+      const { eq: eq27 } = await import("drizzle-orm");
       const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-      const billRecord = await db2.select().from(bills2).where(eq23(bills2.id, billId));
+      const billRecord = await db2.select().from(bills2).where(eq27(bills2.id, billId));
       if (!billRecord.length) {
         return res.status(404).json({ message: "Bill not found" });
       }
@@ -6426,9 +8048,9 @@ async function registerRoutes(app2) {
       const billId = parseInt(req.params.billId);
       const userId = req.session?.userId || req.user?.claims?.sub;
       const { bills: bills2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq23 } = await import("drizzle-orm");
+      const { eq: eq27 } = await import("drizzle-orm");
       const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-      const bill = await db2.select().from(bills2).where(eq23(bills2.id, billId));
+      const bill = await db2.select().from(bills2).where(eq27(bills2.id, billId));
       if (!bill.length || bill[0].userId !== userId) {
         return res.status(403).json({ message: "Unauthorized" });
       }
@@ -6436,7 +8058,7 @@ async function registerRoutes(app2) {
         status: "paid",
         paymentDate: /* @__PURE__ */ new Date(),
         paymentMethod: "cash"
-      }).where(eq23(bills2.id, billId)).returning();
+      }).where(eq27(bills2.id, billId)).returning();
       res.json(updated[0]);
     } catch (error) {
       console.error("Error marking bill as paid:", error);
@@ -6449,14 +8071,14 @@ async function registerRoutes(app2) {
 
 // server/vite.ts
 import express from "express";
-import fs2 from "fs";
-import path3 from "path";
+import fs5 from "fs";
+import path6 from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 
 // vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path2 from "path";
+import path5 from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 var vite_config_default = defineConfig({
   plugins: [
@@ -6470,14 +8092,14 @@ var vite_config_default = defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path2.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path2.resolve(import.meta.dirname, "shared"),
-      "@assets": path2.resolve(import.meta.dirname, "attached_assets")
+      "@": path5.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path5.resolve(import.meta.dirname, "shared"),
+      "@assets": path5.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  root: path2.resolve(import.meta.dirname, "client"),
+  root: path5.resolve(import.meta.dirname, "client"),
   build: {
-    outDir: path2.resolve(import.meta.dirname, "dist/public"),
+    outDir: path5.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true
   },
   server: {
@@ -6489,7 +8111,7 @@ var vite_config_default = defineConfig({
 });
 
 // server/vite.ts
-import { nanoid as nanoid2 } from "nanoid";
+import { nanoid as nanoid3 } from "nanoid";
 var viteLogger = createLogger();
 function log(message, source = "express") {
   const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
@@ -6523,16 +8145,16 @@ async function setupVite(app2, server) {
   app2.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path3.resolve(
+      const clientTemplate = path6.resolve(
         import.meta.dirname,
         "..",
         "client",
         "index.html"
       );
-      let template = await fs2.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs5.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid2()}"`
+        `src="/src/main.tsx?v=${nanoid3()}"`
       );
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
@@ -6543,35 +8165,35 @@ async function setupVite(app2, server) {
   });
 }
 function serveStatic(app2) {
-  const distPath = path3.resolve(import.meta.dirname, "public");
-  if (!fs2.existsSync(distPath)) {
+  const distPath = path6.resolve(import.meta.dirname, "public");
+  if (!fs5.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app2.use(express.static(distPath));
   app2.use("*", (_req, res) => {
-    res.sendFile(path3.resolve(distPath, "index.html"));
+    res.sendFile(path6.resolve(distPath, "index.html"));
   });
 }
 
 // server/seed.ts
 init_db();
 init_schema();
-import { eq as eq19 } from "drizzle-orm";
+import { eq as eq23 } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { nanoid as nanoid3 } from "nanoid";
+import { nanoid as nanoid4 } from "nanoid";
 async function seedDatabase() {
   try {
     console.log("Seeding database...");
     const adminEmail = "md@divinenaturals.in";
-    const existingUsers = await db.select().from(users2).where(eq19(users2.email, adminEmail));
+    const existingUsers = await db.select().from(users).where(eq23(users.email, adminEmail));
     if (existingUsers.length > 0) {
       console.log("Database already seeded. Updating CMS content only...");
     } else {
       const hashedPassword = await bcrypt.hash("DivineNaturals@2025", 10);
-      const [adminUser] = await db.insert(users2).values({
-        id: nanoid3(),
+      const [adminUser] = await db.insert(users).values({
+        id: nanoid4(),
         email: adminEmail,
         passwordHash: hashedPassword,
         role: "admin",
@@ -6579,8 +8201,8 @@ async function seedDatabase() {
         lastName: "Rao",
         phone: "1800-DIVINE"
       }).returning();
-      const [customerUser] = await db.insert(users2).values({
-        id: nanoid3(),
+      const [customerUser] = await db.insert(users).values({
+        id: nanoid4(),
         email: "customer@example.com",
         passwordHash: hashedPassword,
         role: "customer",
@@ -6589,8 +8211,8 @@ async function seedDatabase() {
         phone: "9876543210",
         address: "123 Green Lane, Mumbai"
       }).returning();
-      const [partnerUser] = await db.insert(users2).values({
-        id: nanoid3(),
+      const [partnerUser] = await db.insert(users).values({
+        id: nanoid4(),
         email: "delivery@example.com",
         passwordHash: hashedPassword,
         role: "delivery",
@@ -6642,9 +8264,9 @@ async function seedDatabase() {
       }
     ];
     for (const p of baseProducts) {
-      const [existing] = await db.select().from(products).where(eq19(products.sku, p.sku));
+      const [existing] = await db.select().from(products).where(eq23(products.sku, p.sku));
       if (existing) {
-        await db.update(products).set(p).where(eq19(products.sku, p.sku));
+        await db.update(products).set(p).where(eq23(products.sku, p.sku));
       } else {
         await db.insert(products).values(p);
       }
@@ -6724,8 +8346,8 @@ async function seedDatabase() {
       { label: "On-Time Deliveries", value: 99, suffix: ".8%", icon: "Clock", displayOrder: 4 }
     ]);
     console.log("\u2713 Updated 4 Stats Counters");
-    await db.delete(faqs2);
-    await db.insert(faqs2).values([
+    await db.delete(faqs);
+    await db.insert(faqs).values([
       {
         question: "How do subscriptions work?",
         answer: "You can choose your products, set the quantity and frequency (daily, alternate days, or custom), and we'll deliver them automatically. You can pause or cancel anytime through the app.",
@@ -6765,7 +8387,7 @@ async function seedDatabase() {
       isActive: true
     };
     if (existingAbout) {
-      await db.update(aboutUsSettings).set(aboutData).where(eq19(aboutUsSettings.id, existingAbout.id));
+      await db.update(aboutUsSettings).set(aboutData).where(eq23(aboutUsSettings.id, existingAbout.id));
     } else {
       await db.insert(aboutUsSettings).values(aboutData);
     }
@@ -6785,7 +8407,7 @@ async function seedDatabase() {
       isActive: true
     };
     if (existingContact) {
-      await db.update(contactSettings).set(contactData).where(eq19(contactSettings.id, existingContact.id));
+      await db.update(contactSettings).set(contactData).where(eq23(contactSettings.id, existingContact.id));
     } else {
       await db.insert(contactSettings).values(contactData);
     }
@@ -6798,7 +8420,7 @@ async function seedDatabase() {
       isActive: true
     };
     if (existingNewsletter) {
-      await db.update(newsletterSettings).set(newsletterData).where(eq19(newsletterSettings.id, existingNewsletter.id));
+      await db.update(newsletterSettings).set(newsletterData).where(eq23(newsletterSettings.id, existingNewsletter.id));
     } else {
       await db.insert(newsletterSettings).values(newsletterData);
     }
@@ -6823,7 +8445,7 @@ async function seedDatabase() {
       isActive: true
     };
     if (existingFooter) {
-      await db.update(footerSettings).set(footerData).where(eq19(footerSettings.id, existingFooter.id));
+      await db.update(footerSettings).set(footerData).where(eq23(footerSettings.id, existingFooter.id));
     } else {
       await db.insert(footerSettings).values(footerData);
     }
@@ -6838,7 +8460,7 @@ async function seedDatabase() {
 // server/jobs/generateMonthlyBills.ts
 init_db();
 init_schema();
-import { eq as eq20, and as and12, gte as gte7, lte as lte7 } from "drizzle-orm";
+import { eq as eq24, and as and14, gte as gte7, lte as lte7 } from "drizzle-orm";
 async function generateMonthlyBills() {
   console.log("\u{1F550} Starting monthly bill generation...");
   try {
@@ -6846,13 +8468,13 @@ async function generateMonthlyBills() {
     const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1);
     const month = prevMonth.getMonth() + 1;
     const year = prevMonth.getFullYear();
-    const allUsers = await db.select().from(users2);
+    const allUsers = await db.select().from(users);
     for (const user of allUsers) {
       const existingBill = await db.select().from(bills).where(
-        and12(
-          eq20(bills.userId, user.id),
-          eq20(bills.month, month),
-          eq20(bills.year, year)
+        and14(
+          eq24(bills.userId, user.id),
+          eq24(bills.month, month),
+          eq24(bills.year, year)
         )
       );
       if (existingBill.length > 0) {
@@ -6862,8 +8484,8 @@ async function generateMonthlyBills() {
       const startDateStr = `${year}-${String(month).padStart(2, "0")}-01`;
       const endDateStr = `${year}-${String(month).padStart(2, "0")}-${new Date(year, month, 0).getDate()}`;
       const subscriptionDeliveries_list = await db.select().from(subscriptionDeliveries).where(
-        and12(
-          eq20(subscriptionDeliveries.userId, user.id),
+        and14(
+          eq24(subscriptionDeliveries.userId, user.id),
           gte7(subscriptionDeliveries.deliveryDate, startDateStr),
           lte7(subscriptionDeliveries.deliveryDate, endDateStr)
         )
@@ -6871,8 +8493,8 @@ async function generateMonthlyBills() {
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
       const monthOrders = await db.select().from(orders).where(
-        and12(
-          eq20(orders.userId, user.id),
+        and14(
+          eq24(orders.userId, user.id),
           gte7(orders.createdAt, startDate),
           lte7(orders.createdAt, endDate)
         )
@@ -6881,11 +8503,11 @@ async function generateMonthlyBills() {
       const billItems = [];
       for (const delivery of subscriptionDeliveries_list) {
         const sub = await db.query.milkSubscriptions.findFirst({
-          where: eq20(milkSubscriptions.id, delivery.subscriptionId)
+          where: eq24(milkSubscriptions.id, delivery.subscriptionId)
         });
         if (sub) {
           const product = await db.query.products.findFirst({
-            where: eq20(products.id, sub.productId)
+            where: eq24(products.id, sub.productId)
           });
           const total = Number(delivery.quantity) * Number(product?.price || 0);
           subscriptionTotal += total;
@@ -6903,7 +8525,7 @@ async function generateMonthlyBills() {
         const orderAmount = Number(order.totalAmount || 0);
         ordersTotal += orderAmount;
         billItems.push({
-          date: new Date(order.createdAt).toISOString().split("T")[0],
+          date: order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
           description: `Order #${order.id}`,
           quantity: 1,
           price: orderAmount,
@@ -6911,9 +8533,9 @@ async function generateMonthlyBills() {
         });
       }
       const previousBill = await db.select().from(bills).where(
-        and12(
-          eq20(bills.userId, user.id),
-          eq20(bills.status, "unpaid")
+        and14(
+          eq24(bills.userId, user.id),
+          eq24(bills.status, "unpaid")
         )
       );
       const previousPending = previousBill.length > 0 ? Number(previousBill[0].finalAmount || 0) : 0;
@@ -6951,12 +8573,12 @@ async function generateMonthlyBills() {
 async function updateOverdueBills() {
   console.log("\u{1F550} Checking for overdue bills...");
   try {
-    const allBills = await db.select().from(bills).where(eq20(bills.status, "unpaid"));
+    const allBills = await db.select().from(bills).where(eq24(bills.status, "unpaid"));
     for (const bill of allBills) {
       const dueDate = new Date(bill.dueDate);
       const today = /* @__PURE__ */ new Date();
       if (today > dueDate) {
-        await db.update(bills).set({ status: "overdue" }).where(eq20(bills.id, bill.id));
+        await db.update(bills).set({ status: "overdue" }).where(eq24(bills.id, bill.id));
         console.log(`\u26A0\uFE0F  Bill #${bill.id} marked as OVERDUE`);
       }
     }
@@ -6969,18 +8591,18 @@ async function updateOverdueBills() {
 // server/routes/delivery.routes.ts
 init_db();
 init_schema();
-import { Router as Router15 } from "express";
-import { eq as eq21, and as and13 } from "drizzle-orm";
-import bcryptjs2 from "bcryptjs";
-var router15 = Router15();
-router15.post("/login", async (req, res) => {
+import { Router as Router23 } from "express";
+import { eq as eq25, and as and15 } from "drizzle-orm";
+import bcryptjs4 from "bcryptjs";
+var router23 = Router23();
+router23.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
       return res.status(400).json({ message: "Username and password required" });
     }
     const partner = await db.query.deliveryPartners.findFirst({
-      where: eq21(deliveryPartners.username, username)
+      where: eq25(deliveryPartners.username, username)
     });
     if (!partner) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -6991,7 +8613,7 @@ router15.post("/login", async (req, res) => {
     if (!partner.isVerified || partner.status !== "active") {
       return res.status(403).json({ message: "Your account is not yet approved. Please wait for admin verification." });
     }
-    if (!partner.passwordHash || !bcryptjs2.compareSync(password, partner.passwordHash)) {
+    if (!partner.passwordHash || !bcryptjs4.compareSync(password, partner.passwordHash)) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
     req.session.deliveryPartnerId = partner.id;
@@ -7001,14 +8623,14 @@ router15.post("/login", async (req, res) => {
       area: partner.zone,
       username: partner.username,
       phone: partner.phone,
-      profileCompleted: partner.profileCompleted || false
+      profileCompleted: !!(partner.aadhaarNumber && partner.panNumber && partner.licenseNumber)
     });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Login failed" });
   }
 });
-router15.post("/:partnerId/upload-document", async (req, res) => {
+router23.post("/:partnerId/upload-document", async (req, res) => {
   try {
     const { partnerId } = req.params;
     const { docType, fileUrl } = req.body;
@@ -7024,7 +8646,7 @@ router15.post("/:partnerId/upload-document", async (req, res) => {
     else if (docType === "aadhaar_front" || docType === "aadhaar_back") updateData.aadhaarImageUrl = fileUrl;
     else if (docType === "pan") updateData.panImageUrl = fileUrl;
     else if (docType === "license") updateData.licenseImageUrl = fileUrl;
-    const updated = await db.update(deliveryPartners).set(updateData).where(eq21(deliveryPartners.id, parseInt(partnerId))).returning();
+    const updated = await db.update(deliveryPartners).set(updateData).where(eq25(deliveryPartners.id, parseInt(partnerId))).returning();
     res.json({
       message: "Document uploaded successfully",
       document: { type: docType, url: fileUrl }
@@ -7034,14 +8656,14 @@ router15.post("/:partnerId/upload-document", async (req, res) => {
     res.status(500).json({ message: "Upload failed" });
   }
 });
-router15.post("/assign-orders", async (req, res) => {
+router23.post("/assign-orders", async (req, res) => {
   try {
     const { partnerId, orderIds, zoneFilter } = req.body;
     if (!partnerId || !orderIds || orderIds.length === 0) {
       return res.status(400).json({ message: "Partner ID and order IDs required" });
     }
     const partner = await db.query.deliveryPartners.findFirst({
-      where: eq21(deliveryPartners.id, parseInt(partnerId))
+      where: eq25(deliveryPartners.id, parseInt(partnerId))
     });
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -7069,7 +8691,7 @@ router15.post("/assign-orders", async (req, res) => {
     res.status(500).json({ message: "Assignment failed" });
   }
 });
-router15.get("/earnings/:partnerId", async (req, res) => {
+router23.get("/earnings/:partnerId", async (req, res) => {
   try {
     const { partnerId } = req.params;
     const { period = "today" } = req.query;
@@ -7085,9 +8707,9 @@ router15.get("/earnings/:partnerId", async (req, res) => {
       dateFilter = { start: monthAgo, end: today };
     }
     let completedDeliveries = await db.query.deliveryAssignments.findMany({
-      where: and13(
-        eq21(deliveryAssignments.partnerId, parseInt(partnerId)),
-        eq21(deliveryAssignments.status, "delivered")
+      where: and15(
+        eq25(deliveryAssignments.partnerId, parseInt(partnerId)),
+        eq25(deliveryAssignments.status, "delivered")
       )
     });
     if (period !== "total" && dateFilter && typeof dateFilter === "object" && dateFilter.start) {
@@ -7120,12 +8742,12 @@ router15.get("/earnings/:partnerId", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch earnings" });
   }
 });
-router15.post("/send-credentials/:partnerId", async (req, res) => {
+router23.post("/send-credentials/:partnerId", async (req, res) => {
   try {
     const { partnerId } = req.params;
     const { username, tempPassword, method = "sms" } = req.body;
     const partner = await db.query.deliveryPartners.findFirst({
-      where: eq21(deliveryPartners.id, parseInt(partnerId))
+      where: eq25(deliveryPartners.id, parseInt(partnerId))
     });
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -7168,20 +8790,20 @@ Divine Naturals Team
     res.status(500).json({ message: "Failed to send notification" });
   }
 });
-router15.get("/me/:partnerId", async (req, res) => {
+router23.get("/me/:partnerId", async (req, res) => {
   try {
     const { partnerId } = req.params;
     const partner = await db.query.deliveryPartners.findFirst({
-      where: eq21(deliveryPartners.id, parseInt(partnerId))
+      where: eq25(deliveryPartners.id, parseInt(partnerId))
     });
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
     }
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const todayDeliveries = await db.query.deliveryAssignments.findMany({
-      where: and13(
-        eq21(deliveryAssignments.partnerId, parseInt(partnerId)),
-        eq21(deliveryAssignments.assignmentDate, today)
+      where: and15(
+        eq25(deliveryAssignments.partnerId, parseInt(partnerId)),
+        eq25(deliveryAssignments.assignmentDate, today)
       )
     });
     res.json({
@@ -7194,28 +8816,28 @@ router15.get("/me/:partnerId", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch profile" });
   }
 });
-router15.get("/today/:partnerId", async (req, res) => {
+router23.get("/today/:partnerId", async (req, res) => {
   try {
     const { partnerId } = req.params;
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const assignments = await db.query.deliveryAssignments.findMany({
-      where: and13(
-        eq21(deliveryAssignments.partnerId, parseInt(partnerId)),
-        eq21(deliveryAssignments.assignmentDate, today)
+      where: and15(
+        eq25(deliveryAssignments.partnerId, parseInt(partnerId)),
+        eq25(deliveryAssignments.assignmentDate, today)
       )
     });
     const deliveries = await Promise.all(
       assignments.map(async (a) => {
         let item = null;
         if (a.orderId) {
-          item = await db.query.orders.findFirst({ where: eq21(orders.id, a.orderId) });
+          item = await db.query.orders.findFirst({ where: eq25(orders.id, a.orderId) });
         } else if (a.subscriptionId) {
           item = await db.query.milkSubscriptions.findFirst({
-            where: eq21(milkSubscriptions.id, a.subscriptionId)
+            where: eq25(milkSubscriptions.id, a.subscriptionId)
           });
         }
         const customer = item && "userId" in item ? await db.query.users.findFirst({
-          where: eq21(users2.id, item.userId)
+          where: eq25(users.id, item.userId)
         }) : null;
         return {
           ...a,
@@ -7230,7 +8852,7 @@ router15.get("/today/:partnerId", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch deliveries" });
   }
 });
-router15.post("/:partnerId/submit-profile", async (req, res) => {
+router23.post("/:partnerId/submit-profile", async (req, res) => {
   try {
     const { partnerId } = req.params;
     if (!partnerId || partnerId === "null" || isNaN(parseInt(partnerId))) {
@@ -7261,22 +8883,15 @@ router15.post("/:partnerId/submit-profile", async (req, res) => {
       return res.status(400).json({ message: "Pincode must be numeric" });
     }
     const updated = await db.update(deliveryPartners).set({
-      dob: dob ? new Date(dob) : void 0,
-      gender: gender || void 0,
+      dob: dob ? dob : void 0,
       aadhaarNumber,
       panNumber,
       licenseNumber,
       vehicleType: vehicleNumber || void 0,
       address: address ? `${address}, ${city}, ${state} - ${pincode}` : void 0,
       zone: city || void 0,
-      bankAccountNumber: bankAccount,
-      bankIfscCode: bankIfsc || void 0,
-      bankName: bankName || void 0,
-      bankHolderName: bankHolder || void 0,
-      profileCompleted: true,
-      status: "pending_verification",
-      documentsSubmittedDate: /* @__PURE__ */ new Date()
-    }).where(eq21(deliveryPartners.id, parseInt(partnerId))).returning();
+      status: "pending_verification"
+    }).where(eq25(deliveryPartners.id, parseInt(partnerId))).returning();
     if (updated.length === 0) {
       return res.status(404).json({ message: "Partner not found" });
     }
@@ -7289,62 +8904,62 @@ router15.post("/:partnerId/submit-profile", async (req, res) => {
     res.status(500).json({ message: "Failed to submit profile: " + (error.message || "Unknown error") });
   }
 });
-router15.patch("/start/:assignmentId", async (req, res) => {
+router23.patch("/start/:assignmentId", async (req, res) => {
   try {
-    await db.update(deliveryAssignments).set({ status: "picked_up", timeStarted: /* @__PURE__ */ new Date() }).where(eq21(deliveryAssignments.id, parseInt(req.params.assignmentId)));
+    await db.update(deliveryAssignments).set({ status: "picked_up", timeStarted: /* @__PURE__ */ new Date() }).where(eq25(deliveryAssignments.id, parseInt(req.params.assignmentId)));
     res.json({ message: "Delivery started" });
   } catch (error) {
     res.status(500).json({ message: "Failed to start delivery" });
   }
 });
-router15.patch("/complete/:assignmentId", async (req, res) => {
+router23.patch("/complete/:assignmentId", async (req, res) => {
   try {
     const { proofPhoto } = req.body;
-    await db.update(deliveryAssignments).set({ status: "delivered", timeDelivered: /* @__PURE__ */ new Date(), failedPhoto: proofPhoto }).where(eq21(deliveryAssignments.id, parseInt(req.params.assignmentId)));
+    await db.update(deliveryAssignments).set({ status: "delivered", timeDelivered: /* @__PURE__ */ new Date(), failedPhoto: proofPhoto }).where(eq25(deliveryAssignments.id, parseInt(req.params.assignmentId)));
     res.json({ message: "Delivery completed" });
   } catch (error) {
     res.status(500).json({ message: "Failed to complete delivery" });
   }
 });
-router15.patch("/failed/:assignmentId", async (req, res) => {
+router23.patch("/failed/:assignmentId", async (req, res) => {
   try {
     const { reason, photo } = req.body;
-    await db.update(deliveryAssignments).set({ status: "failed", failedReason: reason, failedPhoto: photo }).where(eq21(deliveryAssignments.id, parseInt(req.params.assignmentId)));
+    await db.update(deliveryAssignments).set({ status: "failed", failedReason: reason, failedPhoto: photo }).where(eq25(deliveryAssignments.id, parseInt(req.params.assignmentId)));
     res.json({ message: "Delivery marked as failed" });
   } catch (error) {
     res.status(500).json({ message: "Failed to mark delivery as failed" });
   }
 });
-router15.patch("/collect-cash/:assignmentId", async (req, res) => {
+router23.patch("/collect-cash/:assignmentId", async (req, res) => {
   try {
     const { amount } = req.body;
-    await db.update(deliveryAssignments).set({ collectionStatus: "received", collectedCash: amount }).where(eq21(deliveryAssignments.id, parseInt(req.params.assignmentId)));
+    await db.update(deliveryAssignments).set({ collectionStatus: "received", collectedCash: amount }).where(eq25(deliveryAssignments.id, parseInt(req.params.assignmentId)));
     res.json({ message: "Cash collected" });
   } catch (error) {
     res.status(500).json({ message: "Failed to collect cash" });
   }
 });
-var delivery_routes_default = router15;
+var delivery_routes_default = router23;
 
 // server/routes/admin-delivery.routes.ts
 init_db();
 init_schema();
-import { Router as Router16 } from "express";
-import { eq as eq22, and as and14 } from "drizzle-orm";
+import { Router as Router24 } from "express";
+import { eq as eq26, and as and16 } from "drizzle-orm";
 import bcrypt2 from "bcryptjs";
-var router16 = Router16();
-router16.get("/", async (req, res) => {
+var router24 = Router24();
+router24.get("/", async (req, res) => {
   try {
     const { zone, status: statusFilter, verified } = req.query;
     const conditions = [];
-    if (zone) conditions.push(eq22(deliveryPartners.zone, zone));
-    if (statusFilter) conditions.push(eq22(deliveryPartners.status, statusFilter));
-    if (verified === "true") conditions.push(eq22(deliveryPartners.isVerified, true));
-    if (verified === "false") conditions.push(eq22(deliveryPartners.isVerified, false));
+    if (zone) conditions.push(eq26(deliveryPartners.zone, zone));
+    if (statusFilter) conditions.push(eq26(deliveryPartners.status, statusFilter));
+    if (verified === "true") conditions.push(eq26(deliveryPartners.isVerified, true));
+    if (verified === "false") conditions.push(eq26(deliveryPartners.isVerified, false));
     let allPartners = [];
     if (conditions.length > 0) {
       allPartners = await db.query.deliveryPartners.findMany({
-        where: and14(...conditions)
+        where: and16(...conditions)
       });
     } else {
       allPartners = await db.query.deliveryPartners.findMany();
@@ -7355,11 +8970,11 @@ router16.get("/", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch delivery partners" });
   }
 });
-router16.get("/:id", async (req, res) => {
+router24.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const partner = await db.query.deliveryPartners.findFirst({
-      where: eq22(deliveryPartners.id, parseInt(id))
+      where: eq26(deliveryPartners.id, parseInt(id))
     });
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -7370,14 +8985,14 @@ router16.get("/:id", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch partner" });
   }
 });
-router16.patch("/:id", async (req, res) => {
+router24.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { zone } = req.body;
     if (!zone) {
       return res.status(400).json({ message: "Zone is required" });
     }
-    const updatedPartner = await db.update(deliveryPartners).set({ zone }).where(eq22(deliveryPartners.id, parseInt(id))).returning();
+    const updatedPartner = await db.update(deliveryPartners).set({ zone }).where(eq26(deliveryPartners.id, parseInt(id))).returning();
     if (updatedPartner.length === 0) {
       return res.status(404).json({ message: "Partner not found" });
     }
@@ -7387,7 +9002,7 @@ router16.patch("/:id", async (req, res) => {
     res.status(500).json({ message: "Failed to update partner" });
   }
 });
-router16.post("/:id/generate-password", async (req, res) => {
+router24.post("/:id/generate-password", async (req, res) => {
   try {
     const { id } = req.params;
     const { tempPassword } = req.body;
@@ -7395,7 +9010,7 @@ router16.post("/:id/generate-password", async (req, res) => {
       return res.status(400).json({ message: "Password required" });
     }
     const partner = await db.query.deliveryPartners.findFirst({
-      where: eq22(deliveryPartners.id, parseInt(id))
+      where: eq26(deliveryPartners.id, parseInt(id))
     });
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -7408,7 +9023,7 @@ router16.post("/:id/generate-password", async (req, res) => {
       status: "active",
       // Auto-activate after password is set
       isVerified: true
-    }).where(eq22(deliveryPartners.id, parseInt(id))).returning();
+    }).where(eq26(deliveryPartners.id, parseInt(id))).returning();
     res.json({
       ...updatedPartner[0],
       message: "Password saved successfully",
@@ -7420,7 +9035,7 @@ router16.post("/:id/generate-password", async (req, res) => {
     res.status(500).json({ message: "Failed to generate password" });
   }
 });
-router16.post("/", async (req, res) => {
+router24.post("/", async (req, res) => {
   try {
     const { fullName, email, phone, address, zone, vehicleType, licenseNumber, password } = req.body;
     if (!fullName || !phone || !password) {
@@ -7453,7 +9068,7 @@ router16.post("/", async (req, res) => {
     res.status(500).json({ message: "Failed to create partner" });
   }
 });
-router16.patch("/:id/verify", async (req, res) => {
+router24.patch("/:id/verify", async (req, res) => {
   try {
     const { id } = req.params;
     const { action, username, tempPassword } = req.body;
@@ -7461,7 +9076,7 @@ router16.patch("/:id/verify", async (req, res) => {
       return res.status(400).json({ message: "Invalid action" });
     }
     const partner = await db.query.deliveryPartners.findFirst({
-      where: eq22(deliveryPartners.id, parseInt(id))
+      where: eq26(deliveryPartners.id, parseInt(id))
     });
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -7477,13 +9092,13 @@ router16.patch("/:id/verify", async (req, res) => {
         isVerified: true,
         username: finalUsername,
         passwordHash: hashedPassword
-      }).where(eq22(deliveryPartners.id, parseInt(id))).returning();
+      }).where(eq26(deliveryPartners.id, parseInt(id))).returning();
       console.log(`[Credentials sent to ${partner.fullName}]`);
       console.log(`Username: ${finalUsername}`);
       console.log(`Temp Password: ${tempPassword}`);
       res.json({ ...updatedPartner[0], message: "Partner approved and credentials sent" });
     } else {
-      const updatedPartner = await db.update(deliveryPartners).set({ status: "rejected", isVerified: false }).where(eq22(deliveryPartners.id, parseInt(id))).returning();
+      const updatedPartner = await db.update(deliveryPartners).set({ status: "rejected", isVerified: false }).where(eq26(deliveryPartners.id, parseInt(id))).returning();
       res.json({ ...updatedPartner[0], message: "Partner rejected" });
     }
   } catch (error) {
@@ -7491,7 +9106,7 @@ router16.patch("/:id/verify", async (req, res) => {
     res.status(500).json({ message: "Failed to verify partner" });
   }
 });
-router16.patch("/:id/block", async (req, res) => {
+router24.patch("/:id/block", async (req, res) => {
   try {
     const { id } = req.params;
     const { action, reason } = req.body;
@@ -7499,25 +9114,25 @@ router16.patch("/:id/block", async (req, res) => {
       return res.status(400).json({ message: "Invalid action" });
     }
     const partner = await db.query.deliveryPartners.findFirst({
-      where: eq22(deliveryPartners.id, parseInt(id))
+      where: eq26(deliveryPartners.id, parseInt(id))
     });
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
     }
     const newStatus = action === "block" ? "blocked" : "active";
-    const updatedPartner = await db.update(deliveryPartners).set({ status: newStatus }).where(eq22(deliveryPartners.id, parseInt(id))).returning();
+    const updatedPartner = await db.update(deliveryPartners).set({ status: newStatus }).where(eq26(deliveryPartners.id, parseInt(id))).returning();
     res.json({ ...updatedPartner[0], message: `Partner ${action}ed successfully` });
   } catch (error) {
     console.error("Error blocking partner:", error?.message || error);
     res.status(500).json({ message: "Failed to block/unblock partner" });
   }
 });
-router16.patch("/:id/approve-documents", async (req, res) => {
+router24.patch("/:id/approve-documents", async (req, res) => {
   try {
     const { id } = req.params;
     const { remarks } = req.body;
     const partner = await db.query.deliveryPartners.findFirst({
-      where: eq22(deliveryPartners.id, parseInt(id))
+      where: eq26(deliveryPartners.id, parseInt(id))
     });
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -7525,7 +9140,7 @@ router16.patch("/:id/approve-documents", async (req, res) => {
     const updated = await db.update(deliveryPartners).set({
       isVerified: true,
       status: "active"
-    }).where(eq22(deliveryPartners.id, parseInt(id))).returning();
+    }).where(eq26(deliveryPartners.id, parseInt(id))).returning();
     res.json({
       message: "Partner documents approved successfully",
       partner: updated[0]
@@ -7535,7 +9150,7 @@ router16.patch("/:id/approve-documents", async (req, res) => {
     res.status(500).json({ message: "Failed to approve documents" });
   }
 });
-router16.patch("/:id/reject-documents", async (req, res) => {
+router24.patch("/:id/reject-documents", async (req, res) => {
   try {
     const { id } = req.params;
     const { remarks } = req.body;
@@ -7543,7 +9158,7 @@ router16.patch("/:id/reject-documents", async (req, res) => {
       return res.status(400).json({ message: "Rejection reason is required" });
     }
     const partner = await db.query.deliveryPartners.findFirst({
-      where: eq22(deliveryPartners.id, parseInt(id))
+      where: eq26(deliveryPartners.id, parseInt(id))
     });
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
@@ -7551,7 +9166,7 @@ router16.patch("/:id/reject-documents", async (req, res) => {
     const updated = await db.update(deliveryPartners).set({
       isVerified: false,
       status: "pending_verification"
-    }).where(eq22(deliveryPartners.id, parseInt(id))).returning();
+    }).where(eq26(deliveryPartners.id, parseInt(id))).returning();
     res.json({
       message: "Partner documents rejected. They need to resubmit.",
       partner: updated[0]
@@ -7561,29 +9176,30 @@ router16.patch("/:id/reject-documents", async (req, res) => {
     res.status(500).json({ message: "Failed to reject documents" });
   }
 });
-router16.delete("/:id", async (req, res) => {
+router24.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const deleted = await db.update(deliveryPartners).set({ status: "rejected" }).where(eq22(deliveryPartners.id, parseInt(id))).returning();
+    const deleted = await db.update(deliveryPartners).set({ status: "rejected" }).where(eq26(deliveryPartners.id, parseInt(id))).returning();
     res.json({ message: "Partner deleted", partner: deleted[0] });
   } catch (error) {
     console.error("Error deleting partner:", error?.message || error);
     res.status(500).json({ message: "Failed to delete partner" });
   }
 });
-var admin_delivery_routes_default = router16;
+var admin_delivery_routes_default = router24;
 
 // server/index.ts
 var app = express2();
 app.use(express2.json({ limit: "50mb" }));
 app.use(express2.urlencoded({ extended: false, limit: "50mb" }));
 app.use(fileUpload());
-app.use("/banners", express2.static(path4.join(process.cwd(), "public", "banners")));
-app.use("/products", express2.static(path4.join(process.cwd(), "public", "products")));
-app.use("/icons", express2.static(path4.join(process.cwd(), "public", "icons")));
+app.use("/banners", express2.static(path7.join(process.cwd(), "public", "banners")));
+app.use("/products", express2.static(path7.join(process.cwd(), "public", "products")));
+app.use("/icons", express2.static(path7.join(process.cwd(), "public", "icons")));
+app.use("/uploads", express2.static(path7.join(process.cwd(), "public", "uploads")));
 app.use((req, res, next) => {
   const start = Date.now();
-  const path5 = req.path;
+  const path8 = req.path;
   let capturedJsonResponse = void 0;
   const originalResJson = res.json;
   res.json = function(bodyJson, ...args) {
@@ -7592,8 +9208,8 @@ app.use((req, res, next) => {
   };
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path5.startsWith("/api")) {
-      let logLine = `${req.method} ${path5} ${res.statusCode} in ${duration}ms`;
+    if (path8.startsWith("/api")) {
+      let logLine = `${req.method} ${path8} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }

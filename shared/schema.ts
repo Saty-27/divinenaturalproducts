@@ -41,6 +41,7 @@ export const users = pgTable("users", {
   role: varchar("role").notNull().default("customer"), // customer, admin, vendor, delivery, marketing_staff
   isActive: boolean("is_active").default(true),
   walletBalance: decimal("wallet_balance", { precision: 10, scale: 2 }).default("0"),
+  lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -841,4 +842,63 @@ export type ImageGallery = typeof imageGallery.$inferSelect;
 export type InsertImageGallery = typeof imageGallery.$inferInsert;
 export type VideoGallery = typeof videoGallery.$inferSelect;
 export type InsertVideoGallery = typeof videoGallery.$inferInsert;
+
+// Auth & Chat Support Tables
+export const passwordResetRequests = pgTable("password_reset_requests", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  email: varchar("email").notNull(),
+  status: varchar("status").notNull().default("pending"), // pending, resolved
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  tokenHash: varchar("token_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const chatThreads = pgTable("chat_threads", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  status: varchar("status").notNull().default("pending"), // pending, active, resolved
+  lastMessage: text("last_message"),
+  unreadForAdmin: integer("unread_for_admin").notNull().default(0),
+  unreadForUser: integer("unread_for_user").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  threadId: integer("thread_id").notNull(),
+  senderId: varchar("sender_id"), // Can be null if sent by system
+  senderRole: varchar("sender_role").notNull(), // user, admin
+  message: text("message").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  fileUrl: text("file_url"),
+  fileName: text("file_name"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Zod schemas
+export const insertPasswordResetRequestSchema = createInsertSchema(passwordResetRequests);
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens);
+export const insertChatThreadSchema = createInsertSchema(chatThreads);
+export const insertChatMessageSchema = createInsertSchema(chatMessages);
+
+// Types
+export type PasswordResetRequest = typeof passwordResetRequests.$inferSelect;
+export type InsertPasswordResetRequest = typeof passwordResetRequests.$inferInsert;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+export type ChatThread = typeof chatThreads.$inferSelect;
+export type InsertChatThread = typeof chatThreads.$inferInsert;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = typeof chatMessages.$inferInsert;
+
 

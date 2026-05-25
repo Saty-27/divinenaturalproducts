@@ -32,6 +32,18 @@ import {
   type CartItem,
   type Driver,
   type InsertDriver,
+  passwordResetRequests,
+  passwordResetTokens,
+  chatThreads,
+  chatMessages,
+  type PasswordResetRequest,
+  type InsertPasswordResetRequest,
+  type PasswordResetToken,
+  type InsertPasswordResetToken,
+  type ChatThread,
+  type InsertChatThread,
+  type ChatMessage,
+  type InsertChatMessage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, or, isNull, lte, gte } from "drizzle-orm";
@@ -145,6 +157,30 @@ export interface IStorage {
   updatePrivacyPolicySettings(settings: any): Promise<any>;
   getSiteSettings(): Promise<any | null>;
   updateSiteSettings(settings: any): Promise<any>;
+
+  // User Management
+  getAllUsers(): Promise<User[]>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUserWithPassword(userData: any): Promise<User>;
+
+  // Password reset operations
+  createPasswordResetRequest(request: InsertPasswordResetRequest): Promise<PasswordResetRequest>;
+  getPasswordResetRequests(): Promise<PasswordResetRequest[]>;
+  getPasswordResetRequestById(id: number): Promise<PasswordResetRequest | undefined>;
+  updatePasswordResetRequestStatus(id: number, status: string, resolvedAt?: Date): Promise<PasswordResetRequest>;
+  createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
+  getPasswordResetToken(tokenHash: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenUsed(id: number): Promise<void>;
+
+  // Chat Support operations
+  getOrCreateChatThread(userId: string): Promise<ChatThread>;
+  getChatThreadById(id: number): Promise<ChatThread | undefined>;
+  getChatThreads(): Promise<(ChatThread & { user?: User })[]>;
+  getChatMessages(threadId: number): Promise<ChatMessage[]>;
+  createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  updateChatThreadStatus(id: number, status: string): Promise<ChatThread>;
+  incrementUnreadCount(threadId: number, forRole: "admin" | "user"): Promise<void>;
+  resetUnreadCount(threadId: number, forRole: "admin" | "user"): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -853,6 +889,113 @@ export class DatabaseStorage implements IStorage {
     } else {
       const [created] = await db.insert(siteSettings).values(settingsData).returning();
       return created;
+    }
+  }
+
+  // User Management Implementations
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  // Password reset operations Implementations
+  async createPasswordResetRequest(request: InsertPasswordResetRequest): Promise<PasswordResetRequest> {
+    const [created] = await db.insert(passwordResetRequests).values(request).returning();
+    return created;
+  }
+
+  async getPasswordResetRequests(): Promise<PasswordResetRequest[]> {
+    return await db.select().from(passwordResetRequests).orderBy(desc(passwordResetRequests.createdAt));
+  }
+
+  async getPasswordResetRequestById(id: number): Promise<PasswordResetRequest | undefined> {
+    const [request] = await db.select().from(passwordResetRequests).where(eq(passwordResetRequests.id, id));
+    return request;
+  }
+
+  async updatePasswordResetRequestStatus(id: number, status: string, resolvedAt?: Date): Promise<PasswordResetRequest> {
+    const [updated] = await db.update(passwordResetRequests)
+      .set({ status, resolvedAt })
+      .where(eq(passwordResetRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const [created] = await db.insert(passwordResetTokens).values(token).returning();
+    return created;
+  }
+
+  async getPasswordResetToken(tokenHash: string): Promise<PasswordResetToken | undefined> {
+    const [token] = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.tokenHash, tokenHash));
+    return token;
+  }
+
+  async markPasswordResetTokenUsed(id: number): Promise<void> {
+    await db.update(passwordResetTokens).set({ used: true }).where(eq(passwordResetTokens.id, id));
+  }
+
+  // Chat Support operations Implementations
+  async getOrCreateChatThread(userId: string): Promise<ChatThread> {
+    const [existing] = await db.select().from(chatThreads).where(eq(chatThreads.userId, userId));
+    if (existing) {
+      return existing;
+    }
+    const [created] = await db.insert(chatThreads).values({ userId, status: "pending" }).returning();
+    return created;
+  }
+
+  async getChatThreadById(id: number): Promise<ChatThread | undefined> {
+    const [thread] = await db.select().from(chatThreads).where(eq(chatThreads.id, id));
+    return thread;
+  }
+
+  async getChatThreads(): Promise<(ChatThread & { user?: User })[]> {
+    const allThreads = await db.select().from(chatThreads).orderBy(desc(chatThreads.updatedAt));
+    const threadsWithUser: (ChatThread & { user?: User })[] = [];
+    for (const thread of allThreads) {
+      const [user] = await db.select().from(users).where(eq(users.id, thread.userId));
+      threadsWithUser.push({
+        ...thread,
+        user,
+      });
+    }
+    return threadsWithUser;
+  }
+
+  async getChatMessages(threadId: number): Promise<ChatMessage[]> {
+    return await db.select().from(chatMessages).where(eq(chatMessages.threadId, threadId)).orderBy(asc(chatMessages.createdAt));
+  }
+
+  async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    const [created] = await db.insert(chatMessages).values(message).returning();
+    // Update lastMessage and updatedAt in thread
+    await db.update(chatThreads)
+      .set({ lastMessage: message.message, updatedAt: new Date() })
+      .where(eq(chatThreads.id, message.threadId));
+    return created;
+  }
+
+  async updateChatThreadStatus(id: number, status: string): Promise<ChatThread> {
+    const [updated] = await db.update(chatThreads).set({ status }).where(eq(chatThreads.id, id)).returning();
+    return updated;
+  }
+
+  async incrementUnreadCount(threadId: number, forRole: "admin" | "user"): Promise<void> {
+    const [thread] = await db.select().from(chatThreads).where(eq(chatThreads.id, threadId));
+    if (thread) {
+      if (forRole === "admin") {
+        await db.update(chatThreads).set({ unreadForAdmin: thread.unreadForAdmin + 1 }).where(eq(chatThreads.id, threadId));
+      } else {
+        await db.update(chatThreads).set({ unreadForUser: thread.unreadForUser + 1 }).where(eq(chatThreads.id, threadId));
+      }
+    }
+  }
+
+  async resetUnreadCount(threadId: number, forRole: "admin" | "user"): Promise<void> {
+    if (forRole === "admin") {
+      await db.update(chatThreads).set({ unreadForAdmin: 0 }).where(eq(chatThreads.id, threadId));
+    } else {
+      await db.update(chatThreads).set({ unreadForUser: 0 }).where(eq(chatThreads.id, threadId));
     }
   }
 }

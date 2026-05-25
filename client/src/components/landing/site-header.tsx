@@ -47,10 +47,10 @@ export default function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm transition-all duration-300">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between h-28 md:h-36 px-4 lg:px-8">
-          <Link href="/" className="flex items-center gap-4" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: "instant" })}>
-            <div className="w-20 h-20 md:w-28 md:h-28 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden p-1 border-2 border-green-50 transition-transform hover:scale-105">
+      <div className="max-w-[1400px] mx-auto">
+        <div className="flex items-center justify-between h-20 lg:h-24 xl:h-28 px-4 lg:px-8">
+          <Link href="/" className="flex items-center gap-2 xl:gap-4" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: "instant" })}>
+            <div className="w-14 h-14 lg:w-16 lg:h-16 xl:w-20 xl:h-20 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden p-1 border-2 border-green-50 transition-transform hover:scale-105">
               <img 
                 src={settings.logoUrl || logoImage} 
                 alt={settings.brandName} 
@@ -58,15 +58,15 @@ export default function SiteHeader() {
               />
             </div>
             <div>
-              <h1 className="text-sm sm:text-lg md:text-xl font-bold text-gray-900 leading-tight tracking-tight">{settings.brandName}</h1>
-              <p className="text-[9px] sm:text-[10px] md:text-xs text-green-600 font-medium -mt-0.5">Pure. Fresh. Daily.</p>
+              <h1 className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-gray-900 leading-tight tracking-tight">{settings.brandName}</h1>
+              <p className="text-[8px] sm:text-[9px] lg:text-[10px] xl:text-[11px] text-green-600 font-medium -mt-0.5">Pure. Fresh. Daily.</p>
             </div>
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-8">
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-6">
             <Link
               href="/"
-              className={`text-sm font-medium transition-colors hover:text-green-600 ${
+              className={`text-xs xl:text-sm font-medium transition-colors hover:text-green-600 ${
                 location === "/" ? "text-green-600" : "text-gray-700"
               }`}
             >
@@ -74,7 +74,7 @@ export default function SiteHeader() {
             </Link>
             <Link
               href="/about"
-              className={`text-sm font-medium transition-colors hover:text-green-600 ${
+              className={`text-xs xl:text-sm font-medium transition-colors hover:text-green-600 ${
                 location === "/about" ? "text-green-600" : "text-gray-700"
               }`}
             >
@@ -82,7 +82,7 @@ export default function SiteHeader() {
             </Link>
             <Link
               href="/shop"
-              className={`text-sm font-medium transition-colors hover:text-green-600 ${
+              className={`text-xs xl:text-sm font-medium transition-colors hover:text-green-600 ${
                 location.startsWith("/shop") ? "text-green-600" : "text-gray-700"
               }`}
             >
@@ -90,7 +90,7 @@ export default function SiteHeader() {
             </Link>
             <Link
               href="/subscription"
-              className={`text-sm font-medium transition-colors hover:text-green-600 ${
+              className={`text-xs xl:text-sm font-medium transition-colors hover:text-green-600 ${
                 location.startsWith("/subscription") ? "text-green-600" : "text-gray-700"
               }`}
             >
@@ -100,7 +100,7 @@ export default function SiteHeader() {
             {/* Media Dropdown */}
             <div className="relative group">
               <button
-                className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-green-600 ${
+                className={`flex items-center gap-1 text-xs xl:text-sm font-medium transition-colors hover:text-green-600 ${
                   location.startsWith("/blog") || 
                   location.startsWith("/video-blog") || 
                   location.startsWith("/image-gallery") || 
@@ -110,27 +110,29 @@ export default function SiteHeader() {
                 }`}
               >
                 Media
-                <ChevronDown className="w-4.5 h-4.5 transition-transform group-hover:rotate-180" />
+                <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
               </button>
-              <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-2 hidden group-hover:block transition-all z-50">
-                <Link href="/blog" className={`block px-4 py-2 text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/blog") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
-                  Blog
-                </Link>
-                <Link href="/video-blog" className={`block px-4 py-2 text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/video-blog") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
-                  Video Blog
-                </Link>
-                <Link href="/image-gallery" className={`block px-4 py-2 text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/image-gallery") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
-                  Image Gallery
-                </Link>
-                <Link href="/video-gallery" className={`block px-4 py-2 text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/video-gallery") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
-                  Video Gallery
-                </Link>
+              <div className="absolute left-0 top-full pt-2 w-48 hidden group-hover:block transition-all z-50">
+                <div className="bg-white border border-gray-100 rounded-xl shadow-lg py-2">
+                  <Link href="/blog" className={`block px-4 py-2 text-xs xl:text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/blog") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
+                    Blog
+                  </Link>
+                  <Link href="/video-blog" className={`block px-4 py-2 text-xs xl:text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/video-blog") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
+                    Video Blog
+                  </Link>
+                  <Link href="/image-gallery" className={`block px-4 py-2 text-xs xl:text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/image-gallery") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
+                    Image Gallery
+                  </Link>
+                  <Link href="/video-gallery" className={`block px-4 py-2 text-xs xl:text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/video-gallery") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
+                    Video Gallery
+                  </Link>
+                </div>
               </div>
             </div>
 
             <Link
               href="/contact"
-              className={`text-sm font-medium transition-colors hover:text-green-600 ${
+              className={`text-xs xl:text-sm font-medium transition-colors hover:text-green-600 ${
                 location === "/contact" ? "text-green-600" : "text-gray-700"
               }`}
             >
@@ -138,14 +140,14 @@ export default function SiteHeader() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-1.5 lg:gap-3">
             <form onSubmit={handleSearch} className="hidden md:block relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search products..."
-                className="w-44 lg:w-56 px-4 py-2 pr-10 text-sm bg-gray-50 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-all"
+                className="w-32 lg:w-40 xl:w-48 focus:w-40 lg:focus:w-48 xl:focus:w-56 px-4 py-2 pr-10 text-xs xl:text-sm bg-gray-50 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-all duration-300"
               />
               <button
                 type="submit"
@@ -159,9 +161,9 @@ export default function SiteHeader() {
               onClick={() => setLocation("/cart")}
               className="relative p-2 text-gray-600 hover:text-green-600 transition-colors"
             >
-              <ShoppingCart className="w-5 h-5 md:w-6 md:h-6" />
+              <ShoppingCart className="w-5 h-5 lg:w-6 lg:h-6" />
               {cartCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-green-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 lg:w-5 lg:h-5 bg-green-600 text-white text-[9px] lg:text-[10px] font-bold rounded-full flex items-center justify-center">
                   {cartCount}
                 </span>
               )}
@@ -173,12 +175,12 @@ export default function SiteHeader() {
                   onClick={() => setLocation("/home")}
                   className="p-2 text-gray-600 hover:text-green-600 transition-colors"
                 >
-                  <User className="w-5 h-5 md:w-6 md:h-6" />
+                  <User className="w-5 h-5 lg:w-6 lg:h-6" />
                 </button>
               ) : (
                 <Button
                   onClick={() => setLocation("/auth/login")}
-                  className="hidden md:flex bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-6 py-2 rounded-full transition-all"
+                  className="hidden md:flex bg-green-600 hover:bg-green-700 text-white text-xs xl:text-sm font-medium px-4 py-1.5 xl:px-6 xl:py-2 rounded-full transition-all"
                 >
                   Login
                 </Button>

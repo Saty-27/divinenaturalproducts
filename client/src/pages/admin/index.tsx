@@ -19,49 +19,63 @@ import AdminImageGalleryPage from "./image-gallery";
 import AdminVideoGalleryPage from "./video-gallery";
 import VendorsPage from "./vendors";
 import StockHistoryPage from "./stock-history";
+import UsersAdmin from "./users";
+import PasswordRequestsAdmin from "./password-requests";
+import ChatsAdmin from "./chats";
 
 export default function AdminPage() {
   const [location] = useLocation();
+  const normalizedPath = location.endsWith("/") && location.length > 1 
+    ? location.slice(0, -1) 
+    : location;
 
-  if (location === "/admin" || location === "/admin/dashboard") {
+  console.log("DEBUG: AdminPage location:", location, "normalizedPath:", normalizedPath);
+
+  if (normalizedPath === "/admin" || normalizedPath === "/admin/dashboard") {
     return <AdminDashboard />;
-  } else if (location === "/admin/orders") {
+  } else if (normalizedPath === "/admin/orders") {
     return <OrdersAdmin />;
-  } else if (location === "/admin/subscriptions") {
+  } else if (normalizedPath === "/admin/subscriptions") {
     return <SubscriptionsAdmin />;
-  } else if (location === "/admin/categories") {
+  } else if (normalizedPath === "/admin/categories") {
     return <CategoriesAdmin />;
-  } else if (location === "/admin/products" || location === "/admin/inventory") {
+  } else if (normalizedPath === "/admin/products" || normalizedPath === "/admin/inventory") {
     return <ProductsAdmin />;
-  } else if (location === "/admin/customers") {
+  } else if (normalizedPath === "/admin/customers") {
     return <CustomersAdmin />;
-  } else if (location?.startsWith("/admin/customers/")) {
+  } else if (normalizedPath === "/admin/users") {
+    return <UsersAdmin />;
+  } else if (normalizedPath === "/admin/password-requests") {
+    return <PasswordRequestsAdmin />;
+  } else if (normalizedPath === "/admin/chats") {
+    return <ChatsAdmin />;
+  } else if (normalizedPath?.startsWith("/admin/customers/")) {
     return <CustomerDetailPage />;
-  } else if (location === "/admin/billing") {
+  } else if (normalizedPath === "/admin/billing") {
     return <AdminBillingPage />;
-  } else if (location?.startsWith("/admin/billing/")) {
+  } else if (normalizedPath?.startsWith("/admin/billing/")) {
     return <AdminBillingDetailPage />;
-  } else if (location === "/admin/delivery" || location === "/admin/delivery-partners") {
+  } else if (normalizedPath === "/admin/delivery" || normalizedPath === "/admin/delivery-partners") {
     return <DeliveryPartnersPage />;
-  } else if (location === "/admin/vendors") {
+  } else if (normalizedPath === "/admin/vendors") {
     return <VendorsPage />;
-  } else if (location === "/admin/stock-history") {
+  } else if (normalizedPath === "/admin/stock-history") {
     return <StockHistoryPage />;
-  } else if (location === "/admin/banners") {
+  } else if (normalizedPath === "/admin/banners") {
     return <AdminBannersPage />;
-  } else if (location === "/admin/homepage") {
+  } else if (normalizedPath === "/admin/homepage") {
     return <HomepageCMS />;
-  } else if (location?.startsWith("/admin/cms")) {
+  } else if (normalizedPath?.startsWith("/admin/cms")) {
     return <CMSManagementPage />;
-  } else if (location === "/admin/brand") {
+  } else if (normalizedPath === "/admin/brand") {
     return <BrandSettings />;
-  } else if (location === "/admin/blogs") {
+  } else if (normalizedPath === "/admin/blogs") {
     return <AdminBlogsPage />;
-  } else if (location === "/admin/video-blogs") {
+  } else if (normalizedPath === "/admin/video-blogs") {
     return <AdminVideoBlogsPage />;
-  } else if (location === "/admin/image-gallery") {
+  } else if (normalizedPath === "/admin/image-gallery") {
     return <AdminImageGalleryPage />;
-  } else if (location === "/admin/video-gallery") {
+  } else if (normalizedPath === "/admin/video-gallery") {
     return <AdminVideoGalleryPage />;
   }
 

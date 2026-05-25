@@ -29,12 +29,17 @@ import { Link, useLocation } from "wouter";
 import logoImage from "@assets/WhatsApp Image 2025-08-07 at 16.06.46_1755865958874.jpg";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { useQuery } from "@tanstack/react-query";
+import { Key } from "lucide-react";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard Overview", icon: LayoutDashboard, path: "/admin" },
   { id: "banners", label: "Banner Management", icon: Image, path: "/admin/banners" },
   { id: "homepage", label: "Homepage CMS", icon: Layout, path: "/admin/homepage" },
   { id: "customers", label: "Customers", icon: Users, path: "/admin/customers" },
+  { id: "admin-users", label: "Users Management", icon: UserCog, path: "/admin/users" },
+  { id: "password-requests", label: "Password Requests", icon: Key, path: "/admin/password-requests" },
+  { id: "admin-chat", label: "User Chats", icon: MessageSquare, path: "/admin/chats" },
   { id: "pages", label: "Pages Management", icon: FileText, path: "/admin/pages" },
   { id: "contact-messages", label: "Contact Messages", icon: MessageSquare, path: "/admin/contact-submissions" },
   { id: "orders", label: "Orders", icon: Package, path: "/admin/orders" },
@@ -59,8 +64,37 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { logout } = useAdminAuth();
+  const { logout, isAdminLoggedIn } = useAdminAuth();
   const { settings } = useSiteSettings();
+
+  // Poll for password requests and chat threads when logged in as admin
+  const { data: pendingRequests = [] } = useQuery({
+    queryKey: ["admin", "pending-password-requests"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/admin/password-requests", { credentials: "include" });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data.filter((r: any) => r.status === "pending") : [];
+    },
+    enabled: !!isAdminLoggedIn,
+    refetchInterval: 10000,
+  });
+
+  const { data: chatThreads = [] } = useQuery({
+    queryKey: ["admin", "chat-threads"],
+    queryFn: async () => {
+      const res = await fetch("/api/chat/admin/threads", { credentials: "include" });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!isAdminLoggedIn,
+    refetchInterval: 10000,
+  });
+
+  const unreadChats = chatThreads.reduce((acc: number, t: any) => acc + Number(t.unreadForAdmin || 0), 0);
+  const pendingRequestsCount = pendingRequests.length;
+
 
   const isTabActive = (path: string) =>
     path === "/admin"
@@ -156,6 +190,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   >
                     <Icon className="w-4 h-4 mr-3 flex-shrink-0" />
                     <span className="text-sm font-medium truncate">{tab.label}</span>
+                    {tab.id === "password-requests" && pendingRequestsCount > 0 && (
+                      <Badge variant="destructive" className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                        {pendingRequestsCount}
+                      </Badge>
+                    )}
+                    {tab.id === "admin-chat" && unreadChats > 0 && (
+                      <Badge variant="destructive" className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                        {unreadChats}
+                      </Badge>
+                    )}
                   </Button>
                 </Link>
               );

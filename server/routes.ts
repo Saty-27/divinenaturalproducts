@@ -28,6 +28,10 @@ import videoBlogRoutes from "./routes/video-blog.routes";
 import imageGalleryRoutes from "./routes/image-gallery.routes";
 import videoGalleryRoutes from "./routes/video-gallery.routes";
 import mediaUploadRoutes from "./routes/media.routes";
+import adminUsersRoutes from "./routes/admin-users.routes";
+import passwordResetRoutes from "./routes/password-reset.routes";
+import chatRoutes from "./routes/chat.routes";
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -46,15 +50,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/cart', cartRoutes);
   app.use('/api/addresses', addressRoutes);
   app.use('/api/orders', orderRoutes);
+  app.use('/api/admin/users', adminUsersRoutes);
+  app.use('/api/auth', passwordResetRoutes);
+  app.use('/api/chat', chatRoutes);
   app.get('/api/admin/orders', requireAdminAccess, async (req: any, res) => {
     try {
-      const { orders } = await import('@shared/schema');
+      const { orders, users, orderItems, products } = await import('@shared/schema');
       const { db } = await import('./db');
+      const { eq, inArray } = await import('drizzle-orm');
       const status = req.query.status as string;
+      
       let allOrders = await db.select().from(orders);
-      if (status) allOrders = allOrders.filter((o: any) => o.status === status);
-      res.json(allOrders);
+      if (status) {
+        allOrders = allOrders.filter((o: any) => o.status === status);
+      }
+      
+      const orderIds = allOrders.map((o) => o.id);
+      const allItems = orderIds.length 
+        ? await db
+            .select({ item: orderItems, product: products })
+            .from(orderItems)
+            .leftJoin(products, eq(orderItems.productId, products.id))
+            .where(inArray(orderItems.orderId, orderIds))
+        : [];
+      
+      const itemsMap = new Map<number, any[]>();
+      for (const row of allItems) {
+        if (!row.item.orderId) continue;
+        const current = itemsMap.get(row.item.orderId) || [];
+        current.push({
+          ...row.item,
+          product: row.product,
+        });
+        itemsMap.set(row.item.orderId, current);
+      }
+      
+      const withDetails = await Promise.all(
+        allOrders.map(async (order: any) => {
+          let customer = null;
+          if (order.userId) {
+            customer = await db.query.users.findFirst({
+              where: eq(users.id, order.userId),
+            });
+          }
+          const items = itemsMap.get(order.id) || [];
+          return { ...order, customer, items };
+        })
+      );
+      
+      res.json(withDetails);
     } catch (error) {
+      console.error("Error fetching orders:", error);
       res.status(500).json({ message: "Failed to fetch orders" });
     }
   });

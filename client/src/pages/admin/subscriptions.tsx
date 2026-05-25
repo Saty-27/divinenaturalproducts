@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
 
 export default function SubscriptionsAdmin() {
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -31,6 +32,7 @@ export default function SubscriptionsAdmin() {
   });
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -69,6 +71,24 @@ export default function SubscriptionsAdmin() {
         return [];
       }
     },
+  });
+
+  const filteredSubscriptions = subscriptions.filter((sub: any) => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
+
+    const subIdMatch = String(sub.id).includes(term);
+    const customerName = sub.customer
+      ? `${sub.customer.firstName || ""} ${sub.customer.lastName || ""}`.toLowerCase()
+      : "";
+    const customerNameMatch = customerName.includes(term);
+    const phoneMatch = sub.customer?.phone?.toLowerCase().includes(term) || false;
+    const emailMatch = sub.customer?.email?.toLowerCase().includes(term) || false;
+    const statusMatch = sub.status?.toLowerCase().includes(term) || false;
+    const productNameMatch = sub.product?.name?.toLowerCase().includes(term) || false;
+    const frequencyMatch = sub.frequency?.toLowerCase().includes(term) || false;
+
+    return subIdMatch || customerNameMatch || phoneMatch || emailMatch || statusMatch || productNameMatch || frequencyMatch;
   });
 
   const { data: products = [] } = useQuery({
@@ -227,52 +247,92 @@ export default function SubscriptionsAdmin() {
           </div>
 
 
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <button
-              onClick={() => setStatusFilter("")}
-              style={{
-                padding: "0.5rem 1rem",
-                background: !statusFilter ? "#16a34a" : "#e5e7eb",
-                color: !statusFilter ? "white" : "#374151",
-                border: "none",
-                borderRadius: "0.5rem",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-              }}
-            >
-              All ({totalSubs})
-            </button>
-            <button
-              onClick={() => setStatusFilter("ACTIVE")}
-              style={{
-                padding: "0.5rem 1rem",
-                background: statusFilter === "ACTIVE" ? "#3b82f6" : "#e5e7eb",
-                color: statusFilter === "ACTIVE" ? "white" : "#374151",
-                border: "none",
-                borderRadius: "0.5rem",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-              }}
-            >
-              ✅ Active ({activeSubs})
-            </button>
-            <button
-              onClick={() => setStatusFilter("PAUSED")}
-              style={{
-                padding: "0.5rem 1rem",
-                background: statusFilter === "PAUSED" ? "#f59e0b" : "#e5e7eb",
-                color: statusFilter === "PAUSED" ? "white" : "#374151",
-                border: "none",
-                borderRadius: "0.5rem",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-              }}
-            >
-              ⏸ Paused ({pausedSubs})
-            </button>
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <button
+                onClick={() => setStatusFilter("")}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: !statusFilter ? "#16a34a" : "#e5e7eb",
+                  color: !statusFilter ? "white" : "#374151",
+                  border: "none",
+                  borderRadius: "0.5rem",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                }}
+              >
+                All ({totalSubs})
+              </button>
+              <button
+                onClick={() => setStatusFilter("ACTIVE")}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: statusFilter === "ACTIVE" ? "#3b82f6" : "#e5e7eb",
+                  color: statusFilter === "ACTIVE" ? "white" : "#374151",
+                  border: "none",
+                  borderRadius: "0.5rem",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                }}
+              >
+                ✅ Active ({activeSubs})
+              </button>
+              <button
+                onClick={() => setStatusFilter("PAUSED")}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: statusFilter === "PAUSED" ? "#f59e0b" : "#e5e7eb",
+                  color: statusFilter === "PAUSED" ? "white" : "#374151",
+                  border: "none",
+                  borderRadius: "0.5rem",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                }}
+              >
+                ⏸ Paused ({pausedSubs})
+              </button>
+            </div>
+
+            {/* Search Bar */}
+            <div style={{ position: "relative", minWidth: "300px", flex: "1", maxWidth: "450px" }}>
+              <input
+                type="text"
+                placeholder="🔍 Search ID, customer name, phone, product..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "0.5rem 1rem",
+                  paddingRight: "2rem",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.875rem",
+                  outline: "none",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                }}
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  style={{
+                    position: "absolute",
+                    right: "0.75rem",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#9ca3af",
+                    fontSize: "0.875rem"
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -308,8 +368,8 @@ export default function SubscriptionsAdmin() {
         <div style={{ background: "white", borderRadius: "0.5rem", padding: "1.5rem", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflowX: "auto" }}>
           {isLoading ? (
             <p style={{ textAlign: "center", color: "#6b7280", padding: "2rem" }}>Loading subscriptions...</p>
-          ) : subscriptions.length === 0 ? (
-            <p style={{ textAlign: "center", color: "#6b7280", padding: "2rem" }}>No subscriptions found</p>
+          ) : filteredSubscriptions.length === 0 ? (
+            <p style={{ textAlign: "center", color: "#6b7280", padding: "2rem" }}>No matching subscriptions found</p>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead style={{ background: "#f3f4f6", borderBottom: "2px solid #e5e7eb" }}>
@@ -325,13 +385,26 @@ export default function SubscriptionsAdmin() {
                 </tr>
               </thead>
               <tbody>
-                {subscriptions.map((sub: any, idx: number) => (
+                {filteredSubscriptions.map((sub: any, idx: number) => (
                   <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontFamily: "monospace", color: "#3b82f6", fontWeight: "600" }}>
                       #{sub.id}
                     </td>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#374151" }}>
-                      {sub.customer?.name || "Unknown"}
+                      {sub.customer ? (
+                        <Link href={`/admin/customers/${sub.userId}`}>
+                          <div style={{ color: "#3b82f6", cursor: "pointer", textDecoration: "underline", fontWeight: "600" }}>
+                            {`${sub.customer.firstName || ""} ${sub.customer.lastName || ""}`.trim() || "No Name"}
+                          </div>
+                          {sub.customer.phone && (
+                            <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                              📞 {sub.customer.phone}
+                            </div>
+                          )}
+                        </Link>
+                      ) : (
+                        <span style={{ color: "#9ca3af" }}>Unknown</span>
+                      )}
                     </td>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#374151" }}>
                       {sub.product?.name || "N/A"}
@@ -573,7 +646,11 @@ export default function SubscriptionsAdmin() {
                       {del.deliveryDate}
                     </td>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600", color: "#111827" }}>
-                      {del.customerName}
+                      <Link href={`/admin/customers/${del.customerId}`}>
+                        <span style={{ color: "#3b82f6", cursor: "pointer", textDecoration: "underline" }}>
+                          {del.customerName}
+                        </span>
+                      </Link>
                     </td>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
                       {del.quantity} L ({del.productName})

@@ -25,6 +25,14 @@ export function setupAuthRoutes(app: Express) {
         });
       }
 
+      // Check if user is blocked
+      if (user.isActive === false) {
+        return res.status(403).json({
+          message: "Your account has been blocked. Please contact support.",
+          code: "USER_BLOCKED",
+        });
+      }
+
       // Verify password
       const passwordMatch = await bcryptjs.compare(
         password,
@@ -34,6 +42,9 @@ export function setupAuthRoutes(app: Express) {
       if (!passwordMatch) {
         return res.status(401).json({ message: "Invalid password" });
       }
+
+      // Update lastLogin
+      await storage.updateUser(user.id, { lastLogin: new Date() });
 
       // Create session
       req.session.userId = user.id;
@@ -89,6 +100,12 @@ export function setupAuthRoutes(app: Express) {
           .json({ message: "Email and password are required" });
       }
 
+      // Email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+
       if (password.length < 6) {
         return res.status(400).json({
           message: "Password must be at least 6 characters",
@@ -128,6 +145,8 @@ export function setupAuthRoutes(app: Express) {
         address,
         profileImageUrl,
         role: "customer",
+        isActive: true,
+        lastLogin: new Date(),
       });
 
       // Create session
@@ -173,6 +192,12 @@ export function setupAuthRoutes(app: Express) {
         return res.status(401).json({ message: "User not found" });
       }
 
+      // Check if user is blocked
+      if (user.isActive === false) {
+        req.session.destroy(() => {});
+        return res.status(403).json({ message: "Your account has been blocked. Please contact support." });
+      }
+
       res.json({
         id: user.id,
         email: user.email,
@@ -186,6 +211,48 @@ export function setupAuthRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching current user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // POST change password (profile page)
+  app.post("/api/auth/change-password", async (req: any, res: Response) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new passwords are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check current password
+      const isMatch = await bcryptjs.compare(currentPassword, user.passwordHash || "");
+      if (!isMatch) {
+        return res.status(400).json({ message: "Incorrect current password" });
+      }
+
+      // Hash new password
+      const salt = await bcryptjs.genSalt(10);
+      const newHash = await bcryptjs.hash(newPassword, salt);
+
+      // Update user password
+      await storage.updateUser(user.id, { passwordHash: newHash });
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Failed to change password" });
     }
   });
 

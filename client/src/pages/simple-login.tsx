@@ -6,7 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import MainPageLayout from "@/components/layout/main-page-layout";
 import logoImage from "@assets/WhatsApp Image 2025-08-07 at 16.06.46_1755865958874.jpg";
-import { Eye, EyeOff, Camera, Phone as PhoneIcon, MapPin, Loader2, UserPlus, LogIn } from "lucide-react";
+import { Eye, EyeOff, Camera, Phone as PhoneIcon, MapPin, Loader2, UserPlus, LogIn, X, Key } from "lucide-react";
+
 
 type AuthMode = "login" | "signup";
 
@@ -26,6 +27,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { settings } = useSiteSettings();
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSubmitted, setForgotSubmitted] = useState(false);
+
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -178,6 +184,42 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return;
+
+    setForgotLoading(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail.trim() }),
+      });
+
+      if (res.ok) {
+        setForgotSubmitted(true);
+        toast({
+          title: "Request Sent",
+          description: "Your password reset request has been sent to admin.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to submit request. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to contact server",
+        variant: "destructive",
+      });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   return (
     <MainPageLayout>
       <div className="min-h-[80vh] flex items-center justify-center p-4">
@@ -258,6 +300,16 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex justify-end -mt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotModalOpen(true)}
+                  className="text-xs text-green-600 hover:text-green-700 font-semibold hover:underline"
+                >
+                  Forgot Password?
+                </button>
               </div>
 
               <Button
@@ -450,6 +502,79 @@ export default function LoginPage() {
           )}
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {isForgotModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-gray-150 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-gray-900">Forgot Password?</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsForgotModalOpen(false);
+                  setForgotSubmitted(false);
+                  setForgotEmail("");
+                }}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {!forgotSubmitted ? (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Enter your registered email address below. We will submit a password help request to the administrator, who can reset your password or email you a recovery link/temporary login details.
+                </p>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase">
+                    Registered Email
+                  </label>
+                  <Input
+                    type="email"
+                    required
+                    placeholder="name@example.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    disabled={forgotLoading}
+                    className="h-11"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={forgotLoading || !forgotEmail.trim()}
+                  className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl flex items-center justify-center gap-2"
+                >
+                  {forgotLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Request Password Help
+                </Button>
+              </form>
+            ) : (
+              <div className="text-center py-4 space-y-3">
+                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto">
+                  <Key className="w-6 h-6" />
+                </div>
+                <h4 className="font-semibold text-gray-800 text-sm">Help Request Submitted</h4>
+                <p className="text-xs text-gray-500 px-4 leading-relaxed">
+                  Your password reset request has been sent to admin. You will receive help soon.
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotModalOpen(false);
+                    setForgotSubmitted(false);
+                    setForgotEmail("");
+                  }}
+                  className="w-full h-10 mt-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl"
+                >
+                  Close
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </MainPageLayout>
   );
 }

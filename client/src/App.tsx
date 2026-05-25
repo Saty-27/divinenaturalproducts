@@ -6,6 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/hooks/useAuth";
 import LoginPage from "@/pages/simple-login";
+import ResetPasswordPage from "@/pages/auth/reset-password";
 import LandingPage from "@/pages/landing";
 import ProfilePage from "@/pages/home";
 import ShopPage from "@/pages/shop";
@@ -39,6 +40,8 @@ import VideoGalleryPage from "@/pages/video-gallery";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import logoImage from "@assets/WhatsApp Image 2025-08-07 at 16.06.46_1755865958874.jpg";
+import ChatbotWidget from "@/components/chat/chatbot-widget";
+
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -125,6 +128,7 @@ function Router() {
       {/* PUBLIC routes - no auth required */}
       <Route path="/" component={LandingPage} />
       <Route path="/auth/login" component={LoginPage} />
+      <Route path="/auth/reset-password" component={ResetPasswordPage} />
       <Route path="/shop" component={ShopPage} />
       <Route path="/product/:id" component={ProductDetail} />
       <Route path="/blog" component={BlogPage} />
@@ -175,6 +179,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster />
+      <ChatbotWidget />
       <Router />
     </QueryClientProvider>
   );

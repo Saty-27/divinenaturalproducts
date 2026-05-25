@@ -440,7 +440,7 @@ router.get("/today-requirements", async (req: any, res) => {
           customerName: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
           liters: quantity,
           deliveryTime: sub.deliveryTime || "Not specified",
-          address: defaultAddr?.address || "Awaiting address details",
+          address: defaultAddr?.address || user.address || "Awaiting address details",
           landmark: defaultAddr?.landmark || "",
           city: defaultAddr?.city || "Mumbai",
           state: defaultAddr?.state || "Maharashtra",
