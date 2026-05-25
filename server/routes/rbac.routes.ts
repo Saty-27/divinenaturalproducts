@@ -201,6 +201,7 @@ router.get('/site-settings', async (_req, res) => {
 router.get('/categories', async (req, res) => {
   try {
     const categories = await storage.getCategories();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.json(categories);
   } catch (error) {
     console.error("Error fetching categories:", error);
@@ -212,11 +213,18 @@ router.get('/categories', async (req, res) => {
 router.put('/categories/:id', requireAdminAccess, async (req, res) => {
   try {
     const categoryId = parseInt(req.params.id);
-    const updates = req.body;
+    const { name, description, icon, type, active } = req.body;
 
     if (isNaN(categoryId)) {
       return res.status(400).json({ message: "Invalid category ID" });
     }
+
+    const updates: any = {};
+    if (name !== undefined) updates.name = name;
+    if (description !== undefined) updates.description = description;
+    if (icon !== undefined) updates.icon = icon;
+    if (type !== undefined) updates.type = type;
+    if (active !== undefined) updates.isActive = active;
 
     const category = await storage.updateCategory(categoryId, updates);
     
@@ -716,7 +724,7 @@ router.post('/admin/update-password', async (req, res) => {
 // POST /api/admin/categories - Add new category (ADMIN ONLY)
 router.post('/admin/categories', requireAdminAccess, async (req, res) => {
   try {
-    const { name, description, icon } = req.body;
+    const { name, description, icon, type } = req.body;
     
     if (!name) {
       return res.status(400).json({ message: "Category name is required" });
@@ -726,6 +734,7 @@ router.post('/admin/categories', requireAdminAccess, async (req, res) => {
       name,
       description,
       icon,
+      type: type || "physical",
       isActive: true
     });
     
@@ -740,11 +749,18 @@ router.post('/admin/categories', requireAdminAccess, async (req, res) => {
 router.put('/admin/categories/:id', requireAdminAccess, async (req, res) => {
   try {
     const categoryId = parseInt(req.params.id);
-    const updates = req.body;
+    const { name, description, icon, type, active } = req.body;
 
     if (isNaN(categoryId)) {
       return res.status(400).json({ message: "Invalid category ID" });
     }
+
+    const updates: any = {};
+    if (name !== undefined) updates.name = name;
+    if (description !== undefined) updates.description = description;
+    if (icon !== undefined) updates.icon = icon;
+    if (type !== undefined) updates.type = type;
+    if (active !== undefined) updates.isActive = active;
 
     const category = await storage.updateCategory(categoryId, updates);
     
@@ -875,28 +891,32 @@ router.post('/admin/upload-banner-image', requireAdminAccess, async (req: any, r
 // POST /api/admin/products - Add new product
 router.post('/admin/products', requireAdminAccess, async (req, res) => {
   try {
-    const { name, description, category, type, price, unit, stock, imageUrl } = req.body;
+    const { name, description, category, type, price, unit, stock, imageUrl, duration, details, downloadUrl, accessDetails } = req.body;
     
-    if (!name || !category || !type || !price || !unit) {
-      return res.status(400).json({ message: "Required fields missing" });
+    if (!name || !category) {
+      return res.status(400).json({ message: "Item Name and Category are required" });
     }
 
     const product = await storage.createProduct({
       name,
       description,
       category,
-      type,
-      price,
-      unit,
-      stock: stock || 0,
+      type: type || category,
+      price: price ? price.toString() : null,
+      unit: unit || null,
+      stock: stock !== undefined && stock !== "" ? parseInt(stock) : 0,
       imageUrl,
+      duration: duration || null,
+      details: details || null,
+      downloadUrl: downloadUrl || null,
+      accessDetails: accessDetails || null,
       isActive: true
     });
     
-    res.json({ success: true, product, message: "Product added successfully" });
+    res.json({ success: true, product, message: "Item added successfully" });
   } catch (error) {
     console.error("Error adding product:", error);
-    res.status(500).json({ message: "Failed to add product" });
+    res.status(500).json({ message: "Failed to add item" });
   }
 });
 

@@ -22,6 +22,7 @@ export default function CategoriesAdmin() {
     description: "",
     icon: "",
     active: true,
+    type: "physical",
   });
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<number | null>(null);
@@ -33,7 +34,7 @@ export default function CategoriesAdmin() {
     queryKey: ["admin_categories"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/categories", { credentials: "include" });
+        const res = await fetch(`/api/categories?t=${Date.now()}`, { credentials: "include" });
         return res.ok ? res.json() : [];
       } catch {
         return [];
@@ -73,6 +74,7 @@ export default function CategoriesAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin_categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       toast({ title: "✅ Category added!" });
       refetch();
       resetForm();
@@ -93,6 +95,7 @@ export default function CategoriesAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin_categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       toast({ title: "✅ Category updated!" });
       refetch();
       resetForm();
@@ -108,6 +111,7 @@ export default function CategoriesAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin_categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       toast({ title: "✅ Category deleted!" });
       refetch();
     },
@@ -115,7 +119,7 @@ export default function CategoriesAdmin() {
   });
 
   const resetForm = () => {
-    setFormData({ name: "", description: "", image: "", active: true });
+    setFormData({ name: "", description: "", icon: "", active: true, type: "physical" });
     setEditingId(null);
     setShowForm(false);
   };
@@ -125,7 +129,8 @@ export default function CategoriesAdmin() {
       name: cat.name || "",
       description: cat.description || "",
       icon: cat.icon || "",
-      active: cat.active !== false,
+      active: cat.isActive !== false,
+      type: cat.type || "physical",
     });
     setEditingId(cat.id);
     setShowForm(true);
@@ -158,7 +163,7 @@ export default function CategoriesAdmin() {
             🏷️ Categories ({categories.length})
           </h2>
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => { resetForm(); setShowForm(true); }}
             style={{
               padding: "0.5rem 1rem",
               background: "#16a34a",
@@ -255,6 +260,21 @@ export default function CategoriesAdmin() {
 
               <div>
                 <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+                  Category Type *
+                </label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  style={{ width: "100%", padding: "0.5rem", border: "1px solid #d1d5db", borderRadius: "0.5rem", boxSizing: "border-box" }}
+                >
+                  <option value="physical">📦 Physical Product</option>
+                  <option value="service">🛠️ Service</option>
+                  <option value="digital">💾 Digital Product</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
                   Status
                 </label>
                 <select
@@ -318,9 +338,14 @@ export default function CategoriesAdmin() {
                   <div style={{ padding: "1rem" }}>
                     <h4 style={{ fontSize: "1rem", fontWeight: "bold", color: "#111827", margin: "0 0 0.5rem 0" }}>{cat.name}</h4>
                     <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: "0 0 0.75rem 0" }}>{cat.description || "-"}</p>
-                    <span style={{ display: "inline-block", padding: "0.25rem 0.75rem", fontSize: "0.75rem", fontWeight: "600", background: cat.active ? "#d1fae5" : "#fee2e2", color: cat.active ? "#065f46" : "#991b1b", borderRadius: "0.25rem", marginBottom: "0.75rem" }}>
-                      {cat.active ? "✅ Active" : "❌ Inactive"}
-                    </span>
+                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+                      <span style={{ display: "inline-block", padding: "0.25rem 0.75rem", fontSize: "0.75rem", fontWeight: "600", background: cat.isActive !== false ? "#d1fae5" : "#fee2e2", color: cat.isActive !== false ? "#065f46" : "#991b1b", borderRadius: "0.25rem" }}>
+                        {cat.isActive !== false ? "✅ Active" : "❌ Inactive"}
+                      </span>
+                      <span style={{ display: "inline-block", padding: "0.25rem 0.75rem", fontSize: "0.75rem", fontWeight: "600", background: "#f3f4f6", color: "#374151", borderRadius: "0.25rem" }}>
+                        {cat.type === "physical" ? "📦 Physical" : cat.type === "service" ? "🛠️ Service" : "💾 Digital"}
+                      </span>
+                    </div>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <button onClick={() => handleEdit(cat)} disabled={isProcessing} style={{ flex: 1, padding: "0.5rem", background: "#dbeafe", color: "#1e40af", border: "none", borderRadius: "0.5rem", cursor: "pointer", fontSize: "0.75rem", fontWeight: "600" }}>
                         <Edit size={14} style={{ display: "inline" }} /> Edit

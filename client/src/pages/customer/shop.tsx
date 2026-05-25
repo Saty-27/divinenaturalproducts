@@ -29,23 +29,27 @@ export default function CustomerShop() {
     retry: false,
   });
 
+  const { data: dbCategories = [] } = useQuery<any[]>({
+    queryKey: ["/api/categories"],
+    queryFn: async () => {
+      const res = await fetch(`/api/categories?t=${Date.now()}`);
+      return res.ok ? res.json() : [];
+    }
+  });
+
   const categories = [
     { value: "all", label: "All" },
-    { value: "milk", label: "Milk" },
-    { value: "paneer", label: "Paneer" },
-    { value: "ghee", label: "Ghee" },
-    { value: "butter", label: "Butter" },
-    { value: "yogurt", label: "Yogurt" },
+    ...dbCategories.map((c: any) => ({ value: c.name.toLowerCase(), label: c.name }))
   ];
 
   const [, navigate] = useLocation();
 
-  const filteredProducts = products?.filter((product: any) => {
+  const filteredProducts = (products as any)?.filter((product: any) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     // Match by category or type field
     const matchesCategory = selectedCategory === "all" || 
-      product.category === selectedCategory || 
-      product.type === selectedCategory ||
+      product.category?.toLowerCase() === selectedCategory || 
+      product.type?.toLowerCase() === selectedCategory ||
       product.category?.toLowerCase().includes(selectedCategory);
     return matchesSearch && matchesCategory;
   }) || [];
@@ -148,10 +152,10 @@ export default function CustomerShop() {
                   className="w-full h-24 object-cover rounded-xl mb-3"
                 />
                 <h3 className="font-semibold eco-text">{product.name}</h3>
-                <p className="eco-text-muted text-sm mb-2">{product.unit}</p>
+                <p className="eco-text-muted text-sm mb-2">{product.unit || (product.duration ? `Duration: ${product.duration}` : "Service/Listing")}</p>
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-bold text-[var(--eco-primary)]">
-                    ₹{parseFloat(product.price).toFixed(0)}
+                    {product.price && parseFloat(product.price) > 0 ? `₹${parseFloat(product.price).toFixed(0)}` : "Free"}
                   </span>
                   <Button
                     size="sm"

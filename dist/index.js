@@ -157,6 +157,8 @@ var init_schema = __esm({
       icon: varchar("icon"),
       // emoji or icon name - kept for compatibility, can store image URLs too
       isActive: boolean("is_active").default(true),
+      type: varchar("type").notNull().default("physical"),
+      // physical, service, digital
       createdAt: timestamp("created_at").defaultNow()
     });
     products = pgTable("products", {
@@ -166,11 +168,11 @@ var init_schema = __esm({
       description: text("description"),
       category: varchar("category").notNull(),
       // References categories.name
-      type: varchar("type").notNull(),
-      // MILK, DAIRY
-      price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-      unit: varchar("unit").notNull(),
-      // L, kg, g, piece
+      type: varchar("type"),
+      // physical, service, digital (can sync to category type or category name)
+      price: decimal("price", { precision: 10, scale: 2 }),
+      unit: varchar("unit"),
+      // L, kg, g, piece, session, etc
       stock: integer("stock").default(0),
       expiryDate: date("expiry_date"),
       imageUrl: varchar("image_url"),
@@ -182,6 +184,11 @@ var init_schema = __esm({
       launchedAt: timestamp("launched_at"),
       // When product was launched (for sorting new products)
       redirectUrl: varchar("redirect_url"),
+      // New fields for services / digital products:
+      duration: varchar("duration"),
+      details: text("details"),
+      downloadUrl: varchar("download_url"),
+      accessDetails: text("access_details"),
       createdAt: timestamp("created_at").defaultNow()
     });
     vendors = pgTable("vendors", {
@@ -5386,6 +5393,7 @@ router11.get("/site-settings", async (_req, res) => {
 router11.get("/categories", async (req, res) => {
   try {
     const categories2 = await storage.getCategories();
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.json(categories2);
   } catch (error) {
     console.error("Error fetching categories:", error);
@@ -5395,10 +5403,16 @@ router11.get("/categories", async (req, res) => {
 router11.put("/categories/:id", requireAdminAccess, async (req, res) => {
   try {
     const categoryId = parseInt(req.params.id);
-    const updates = req.body;
+    const { name, description, icon, type, active } = req.body;
     if (isNaN(categoryId)) {
       return res.status(400).json({ message: "Invalid category ID" });
     }
+    const updates = {};
+    if (name !== void 0) updates.name = name;
+    if (description !== void 0) updates.description = description;
+    if (icon !== void 0) updates.icon = icon;
+    if (type !== void 0) updates.type = type;
+    if (active !== void 0) updates.isActive = active;
     const category = await storage.updateCategory(categoryId, updates);
     res.json({ success: true, category, message: "Category updated successfully" });
   } catch (error) {
@@ -5761,7 +5775,7 @@ router11.post("/admin/update-password", async (req, res) => {
 });
 router11.post("/admin/categories", requireAdminAccess, async (req, res) => {
   try {
-    const { name, description, icon } = req.body;
+    const { name, description, icon, type } = req.body;
     if (!name) {
       return res.status(400).json({ message: "Category name is required" });
     }
@@ -5769,6 +5783,7 @@ router11.post("/admin/categories", requireAdminAccess, async (req, res) => {
       name,
       description,
       icon,
+      type: type || "physical",
       isActive: true
     });
     res.json({ success: true, category, message: "Category added successfully" });
@@ -5780,10 +5795,16 @@ router11.post("/admin/categories", requireAdminAccess, async (req, res) => {
 router11.put("/admin/categories/:id", requireAdminAccess, async (req, res) => {
   try {
     const categoryId = parseInt(req.params.id);
-    const updates = req.body;
+    const { name, description, icon, type, active } = req.body;
     if (isNaN(categoryId)) {
       return res.status(400).json({ message: "Invalid category ID" });
     }
+    const updates = {};
+    if (name !== void 0) updates.name = name;
+    if (description !== void 0) updates.description = description;
+    if (icon !== void 0) updates.icon = icon;
+    if (type !== void 0) updates.type = type;
+    if (active !== void 0) updates.isActive = active;
     const category = await storage.updateCategory(categoryId, updates);
     res.json({ success: true, category, message: "Category updated successfully" });
   } catch (error) {
@@ -5875,25 +5896,29 @@ router11.post("/admin/upload-banner-image", requireAdminAccess, async (req, res)
 });
 router11.post("/admin/products", requireAdminAccess, async (req, res) => {
   try {
-    const { name, description, category, type, price, unit, stock, imageUrl } = req.body;
-    if (!name || !category || !type || !price || !unit) {
-      return res.status(400).json({ message: "Required fields missing" });
+    const { name, description, category, type, price, unit, stock, imageUrl, duration, details, downloadUrl, accessDetails } = req.body;
+    if (!name || !category) {
+      return res.status(400).json({ message: "Item Name and Category are required" });
     }
     const product = await storage.createProduct({
       name,
       description,
       category,
-      type,
-      price,
-      unit,
-      stock: stock || 0,
+      type: type || category,
+      price: price ? price.toString() : null,
+      unit: unit || null,
+      stock: stock !== void 0 && stock !== "" ? parseInt(stock) : 0,
       imageUrl,
+      duration: duration || null,
+      details: details || null,
+      downloadUrl: downloadUrl || null,
+      accessDetails: accessDetails || null,
       isActive: true
     });
-    res.json({ success: true, product, message: "Product added successfully" });
+    res.json({ success: true, product, message: "Item added successfully" });
   } catch (error) {
     console.error("Error adding product:", error);
-    res.status(500).json({ message: "Failed to add product" });
+    res.status(500).json({ message: "Failed to add item" });
   }
 });
 router11.put("/admin/products/:id", requireAdminAccess, async (req, res) => {

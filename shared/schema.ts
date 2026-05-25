@@ -53,6 +53,7 @@ export const categories = pgTable("categories", {
   description: text("description"),
   icon: varchar("icon"), // emoji or icon name - kept for compatibility, can store image URLs too
   isActive: boolean("is_active").default(true),
+  type: varchar("type").notNull().default("physical"), // physical, service, digital
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -63,9 +64,9 @@ export const products = pgTable("products", {
   sku: varchar("sku").unique(),
   description: text("description"),
   category: varchar("category").notNull(), // References categories.name
-  type: varchar("type").notNull(), // MILK, DAIRY
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  unit: varchar("unit").notNull(), // L, kg, g, piece
+  type: varchar("type"), // physical, service, digital (can sync to category type or category name)
+  price: decimal("price", { precision: 10, scale: 2 }),
+  unit: varchar("unit"), // L, kg, g, piece, session, etc
   stock: integer("stock").default(0),
   expiryDate: date("expiry_date"),
   imageUrl: varchar("image_url"),
@@ -74,6 +75,11 @@ export const products = pgTable("products", {
   isFeatured: boolean("is_featured").default(false), // Flag for featured products
   launchedAt: timestamp("launched_at"), // When product was launched (for sorting new products)
   redirectUrl: varchar("redirect_url"),
+  // New fields for services / digital products:
+  duration: varchar("duration"),
+  details: text("details"),
+  downloadUrl: varchar("download_url"),
+  accessDetails: text("access_details"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -58,7 +58,7 @@ export default function ShopPage() {
   } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      const res = await fetch("/api/categories");
+      const res = await fetch(`/api/categories?t=${Date.now()}`);
       if (!res.ok) throw new Error("Failed to fetch categories");
       return res.json();
     },

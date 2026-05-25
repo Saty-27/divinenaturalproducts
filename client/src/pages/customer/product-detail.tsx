@@ -37,6 +37,10 @@ export default function ProductDetail() {
     );
   }
 
+  const isPhysical = product.type === "physical" || !product.type || product.type === "MILK" || product.type === "DAIRY" || product.type === "OIL";
+  const isService = product.type === "service";
+  const isDigital = product.type === "digital";
+
   const handleAddToCart = () => {
     toast({
       title: "Added to cart",
@@ -74,23 +78,29 @@ export default function ProductDetail() {
           <CardContent className="p-6 space-y-4">
             <div>
               <h2 className="text-3xl font-bold eco-text mb-2">{product.name}</h2>
-              <p className="eco-text-muted text-sm">{product.unit}</p>
+              {isPhysical && product.unit && <p className="eco-text-muted text-sm">{product.unit}</p>}
+              {isService && product.duration && <p className="eco-text-muted text-sm">⏱️ Duration: {product.duration}</p>}
+              {isDigital && <p className="eco-text-muted text-sm">💾 Digital Access</p>}
             </div>
 
             <div className="border-t border-[var(--eco-light)] pt-4">
               <div className="flex justify-between items-center mb-4">
                 <span className="eco-text">Price:</span>
                 <span className="text-2xl font-bold text-[var(--eco-primary)]">
-                  ₹{parseFloat(product.price).toFixed(0)}/{product.unit}
+                  {product.price && parseFloat(product.price) > 0 ? (
+                    isPhysical ? `₹${parseFloat(product.price).toFixed(0)}/${product.unit || 'unit'}` : `₹${parseFloat(product.price).toFixed(0)}`
+                  ) : "Free"}
                 </span>
               </div>
               
-              <div className="flex justify-between items-center mb-4">
-                <span className="eco-text">Stock:</span>
-                <span className={product.stock > 0 ? "eco-text" : "text-red-600"}>
-                  {product.stock > 0 ? `${product.stock} available` : "Out of stock"}
-                </span>
-              </div>
+              {isPhysical && (
+                <div className="flex justify-between items-center mb-4">
+                  <span className="eco-text">Stock:</span>
+                  <span className={product.stock > 0 ? "eco-text" : "text-red-600"}>
+                    {product.stock > 0 ? `${product.stock} available` : "Out of stock"}
+                  </span>
+                </div>
+              )}
             </div>
 
             {product.description && (
@@ -102,42 +112,84 @@ export default function ProductDetail() {
               </div>
             )}
 
+            {isService && product.details && (
+              <div className="border-t border-[var(--eco-light)] pt-4">
+                <h3 className="font-semibold eco-text mb-2">Service Details</h3>
+                <p className="eco-text-muted text-sm leading-relaxed whitespace-pre-wrap">
+                  {product.details}
+                </p>
+              </div>
+            )}
+
+            {isDigital && product.accessDetails && (
+              <div className="border-t border-[var(--eco-light)] pt-4">
+                <h3 className="font-semibold eco-text mb-2">Access Instructions</h3>
+                <p className="eco-text-muted text-sm leading-relaxed whitespace-pre-wrap">
+                  {product.accessDetails}
+                </p>
+              </div>
+            )}
+
+            {isDigital && product.downloadUrl && (
+              <div className="border-t border-[var(--eco-light)] pt-4">
+                <h3 className="font-semibold eco-text mb-2">Download File</h3>
+                <a 
+                  href={product.downloadUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-[var(--eco-primary)] hover:underline text-sm font-semibold gap-1"
+                >
+                  📥 Click here to download product file
+                </a>
+              </div>
+            )}
+
             {/* Quantity Selector */}
-            <div className="border-t border-[var(--eco-light)] pt-4">
-              <div className="flex items-center space-x-4">
-                <span className="eco-text">Quantity:</span>
-                <div className="flex items-center border border-[var(--eco-light)] rounded-lg">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="text-[var(--eco-primary)]"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </Button>
-                  <span className="px-6 py-2 font-semibold">{quantity}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="text-[var(--eco-primary)]"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
+            {isPhysical && (
+              <div className="border-t border-[var(--eco-light)] pt-4">
+                <div className="flex items-center space-x-4">
+                  <span className="eco-text">Quantity:</span>
+                  <div className="flex items-center border border-[var(--eco-light)] rounded-lg">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="text-[var(--eco-primary)]"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </Button>
+                    <span className="px-6 py-2 font-semibold">{quantity}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="text-[var(--eco-primary)]"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Add to Cart Button */}
         <Button
           onClick={handleAddToCart}
-          disabled={product.stock === 0}
+          disabled={isPhysical && product.stock === 0}
           className="w-full bg-[var(--eco-primary)] hover:bg-[var(--eco-primary)]/90 text-white font-semibold py-4 rounded-xl text-lg"
         >
-          <Plus className="w-5 h-5 mr-2" />
-          Add {quantity > 1 ? `${quantity}x` : ""} to Cart - ₹{(parseFloat(product.price) * quantity).toFixed(0)}
+          {isPhysical ? (
+            <>
+              <Plus className="w-5 h-5 mr-2" />
+              Add {quantity > 1 ? `${quantity}x` : ""} to Cart - ₹{(parseFloat(product.price || "0") * quantity).toFixed(0)}
+            </>
+          ) : (
+            <>
+              {isService ? "Book Service" : "Access Digital Product"} - {product.price && parseFloat(product.price) > 0 ? `₹${parseFloat(product.price).toFixed(0)}` : "Free"}
+            </>
+          )}
         </Button>
 
         {/* Back to Shop */}
