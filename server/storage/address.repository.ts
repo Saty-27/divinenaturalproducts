@@ -22,7 +22,7 @@ export class AddressRepository {
       await db
         .update(addresses)
         .set({ isDefault: false })
-        .where(eq(addresses.userId, data.userId));
+        .where(eq(addresses.userId, data.userId as string));
     }
 
     const [address] = await db.insert(addresses).values(data).returning();

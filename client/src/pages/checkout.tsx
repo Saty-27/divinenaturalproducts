@@ -1,7 +1,11 @@
 import { useState } from "react";
-import { SiteHeader } from "@/components/landing/site-header";
-import { SiteFooter } from "@/components/landing/site-footer";
-import { CreditCard, Banknote, User, MapPin, Phone } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import SiteHeader from "@/components/landing/site-header";
+import SiteFooter from "@/components/landing/site-footer";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Banknote, User, MapPin, Phone, ShoppingCart, ShoppingBag, Loader2 } from "lucide-react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 interface CartItem {
@@ -25,18 +29,54 @@ interface User {
 export default function CheckoutPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [isProcessing, setIsProcessing] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [userInfo, setUserInfo] = useState<User>({});
   const { settings } = useSiteSettings();
 
+  const emptyCartSummary = {
+    subtotal: 0,
+    deliveryFee: 0,
+    discount: 0,
+    total: 0,
+    itemCount: 0,
+  };
+
+  const resetCartState = async () => {
+    await queryClient.cancelQueries({ queryKey: ["cart"] });
+    await queryClient.cancelQueries({ queryKey: ["cart-summary"] });
+    queryClient.setQueryData(["cart"], []);
+    queryClient.setQueryData(["cart-summary"], emptyCartSummary);
+  };
+
+  const clearServerCart = async () => {
+    const clearRes = await fetch("/api/cart", {
+      method: "DELETE",
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    if (!clearRes.ok) return false;
+
+    const verifyRes = await fetch("/api/cart", {
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    if (!verifyRes.ok) return false;
+    const data = await verifyRes.json();
+    const items = Array.isArray(data) ? data : data.items || [];
+    return items.length === 0;
+  };
+
   // Fetch cart items
   const { data: cartItems = [] } = useQuery({
     queryKey: ["cart"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/cart", { credentials: "include" });
+        const res = await fetch("/api/cart", { credentials: "include", cache: "no-store" });
         if (!res.ok) return [];
         const data = await res.json();
         return Array.isArray(data) ? data : (data.items || []);
@@ -95,6 +135,7 @@ export default function CheckoutPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({
           items: cartItems,
           total: total,
@@ -106,12 +147,30 @@ export default function CheckoutPage() {
 
       if (res.ok) {
         const order = await res.json();
+        await resetCartState();
         toast({
           title: "✅ Order Placed Successfully!",
           description: `Order ID: ${order.id}`,
         });
         
-        await fetch("/api/cart", { method: "DELETE", credentials: "include" });
+        const serverCartCleared = await clearServerCart();
+        await resetCartState();
+        if (serverCartCleared) {
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["cart"], refetchType: "all" }),
+            queryClient.invalidateQueries({ queryKey: ["cart-summary"], refetchType: "all" }),
+            queryClient.invalidateQueries({ queryKey: ["user-orders"], refetchType: "all" }),
+            queryClient.invalidateQueries({ queryKey: ["/api/orders"], refetchType: "all" }),
+          ]);
+        } else {
+          queryClient.removeQueries({ queryKey: ["cart"] });
+          queryClient.setQueryData(["cart"], []);
+          queryClient.setQueryData(["cart-summary"], emptyCartSummary);
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["user-orders"], refetchType: "all" }),
+            queryClient.invalidateQueries({ queryKey: ["/api/orders"], refetchType: "all" }),
+          ]);
+        }
         setTimeout(() => setLocation("/orders"), 1500);
       } else {
         throw new Error("Failed to create order");
@@ -151,7 +210,7 @@ export default function CheckoutPage() {
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl sm:text-4xl font-black text-[hsl(var(--eco-secondary))] mb-8 flex items-center">
             <span className="w-10 h-10 bg-[hsl(var(--eco-primary))] rounded-xl flex items-center justify-center mr-4 text-white shadow-lg">
-              🛒
+              <ShoppingCart className="w-5 h-5" />
             </span>
             Complete Your Order
           </h1>
@@ -247,7 +306,7 @@ export default function CheckoutPage() {
               {/* Cart Items Summary */}
               <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 p-6 sm:p-8 border border-slate-100">
                 <h2 className="text-2xl font-black text-[hsl(var(--eco-secondary))] mb-6 flex items-center">
-                  <CreditCard className="w-6 h-6 mr-3 text-[hsl(var(--eco-primary))]" />
+                  <ShoppingBag className="w-6 h-6 mr-3 text-[hsl(var(--eco-primary))]" />
                   Order Items
                 </h2>
                 <div className="space-y-4">
@@ -255,7 +314,7 @@ export default function CheckoutPage() {
                     <div key={item.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-[hsl(var(--eco-primary))] transition-all">
                       <div className="flex items-center">
                         <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center mr-4 shadow-sm border border-slate-100 text-2xl">
-                          🥛
+                          <ShoppingBag className="w-6 h-6 text-green-600" />
                         </div>
                         <div>
                           <p className="font-black text-[hsl(var(--eco-secondary))] text-lg">{item.product?.name}</p>
@@ -307,85 +366,6 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                   </label>
-
-                  <label 
-                    className={`flex flex-col p-6 border-3 rounded-2xl cursor-pointer transition-all hover:shadow-lg ${
-                      paymentMethod === "razorpay" 
-                        ? "border-[hsl(var(--eco-primary))] bg-blue-50 shadow-md" 
-                        : "border-slate-100 bg-white"
-                    }`}
-                  >
-                    <div className="flex items-center w-full mb-4">
-                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-4 ${
-                        paymentMethod === "razorpay" ? "border-[hsl(var(--eco-primary))] bg-[hsl(var(--eco-primary))]" : "border-slate-300"
-                      }`}>
-                        {paymentMethod === "razorpay" && <div className="w-2.5 h-2.5 bg-white rounded-full"></div>}
-                      </div>
-                      <input
-                        type="radio"
-                        name="payment"
-                        value="razorpay"
-                        checked={paymentMethod === "razorpay"}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="hidden"
-                      />
-                      <div className="flex-1 flex items-center">
-                        <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center mr-4 shadow-sm border border-slate-100 text-3xl">
-                          <CreditCard className="w-8 h-8 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-black text-[hsl(var(--eco-secondary))] text-xl">Online Payment</p>
-                          <p className="text-[hsl(var(--eco-text-muted))] font-bold">Secure payment via Razorpay, UPI, Cards</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {paymentMethod === "razorpay" && (
-                      <div className="mt-4 p-6 bg-white rounded-xl border-2 border-blue-100 shadow-inner space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
-                        <div className="grid grid-cols-1 gap-4">
-                          <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Card Number</label>
-                            <div className="relative">
-                              <input 
-                                type="text" 
-                                placeholder="XXXX XXXX XXXX XXXX" 
-                                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-lg font-mono font-bold text-lg focus:border-blue-500 focus:ring-0 transition-all"
-                                maxLength={19}
-                              />
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
-                                <div className="w-8 h-5 bg-slate-200 rounded"></div>
-                                <div className="w-8 h-5 bg-slate-200 rounded"></div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Expiry</label>
-                              <input 
-                                type="text" 
-                                placeholder="MM/YY" 
-                                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-lg font-mono font-bold text-lg focus:border-blue-500 focus:ring-0 transition-all"
-                                maxLength={5}
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">CVV</label>
-                              <input 
-                                type="password" 
-                                placeholder="***" 
-                                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-lg font-mono font-bold text-lg focus:border-blue-500 focus:ring-0 transition-all"
-                                maxLength={3}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-[10px] text-blue-500 font-bold flex items-center justify-center gap-2">
-                          <span className="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center text-[8px] text-white">✓</span>
-                          Encrypted by Razorpay Secure
-                        </p>
-                      </div>
-                    )}
-                  </label>
                 </div>
               </div>
             </div>
@@ -413,11 +393,17 @@ export default function CheckoutPage() {
                   disabled={isProcessing || editMode}
                   className="w-full eco-button h-16 text-xl font-black shadow-lg hover:shadow-2xl transition-all"
                 >
-                  {isProcessing ? "🚀 Processing..." : "🚀 Place Order"}
+                  {isProcessing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-6 h-6 animate-spin" /> Processing...
+                    </span>
+                  ) : (
+                    "Place Order"
+                  )}
                 </Button>
                 <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
                   <p className="text-[hsl(var(--eco-text-muted))] text-xs font-bold leading-relaxed">
-                    🔒 Secure 256-bit SSL encrypted checkout. 
+                    Secure 256-bit SSL encrypted checkout. 
                     By placing an order, you agree to {settings.brandName}'s Terms.
                   </p>
                 </div>

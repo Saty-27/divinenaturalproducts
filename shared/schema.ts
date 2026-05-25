@@ -232,6 +232,8 @@ export const subscriptionDeliveries = pgTable("subscription_deliveries", {
   deliveryDate: date("delivery_date"),
   quantity: integer("quantity"),
   status: varchar("status").default("pending"), // pending, delivered, missed, cancelled
+  confirmedByUser: boolean("confirmed_by_user").default(false),
+  confirmedAt: timestamp("confirmed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -287,6 +289,30 @@ export const ticketMessages = pgTable("ticket_messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Admin-only customer CRM notes
+export const adminCustomerNotes = pgTable("admin_customer_notes", {
+  id: serial("id").primaryKey(),
+  customerId: varchar("customer_id").references(() => users.id).notNull(),
+  noteText: text("note_text").notNull(),
+  addedByAdminId: varchar("added_by_admin_id").references(() => users.id),
+  addedByAdminName: varchar("added_by_admin_name"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Customer timeline events recorded by the admin CRM system
+export const customerActivityLogs = pgTable("customer_activity_logs", {
+  id: serial("id").primaryKey(),
+  customerId: varchar("customer_id").references(() => users.id).notNull(),
+  type: varchar("type").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  metadata: jsonb("metadata"),
+  actorId: varchar("actor_id").references(() => users.id),
+  actorName: varchar("actor_name"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Product Vendors (many-to-many)
 export const productVendors = pgTable("product_vendors", {
   id: serial("id").primaryKey(),
@@ -324,6 +350,13 @@ export const bills = pgTable("bills", {
   paymentDate: timestamp("payment_date"),
   paymentMethod: varchar("payment_method"),
   notes: text("notes"),
+  // Admin uploads a bill/PDF for the user
+  billPdfUrl: text("bill_pdf_url"),
+  // User uploads payment screenshot
+  paymentScreenshotUrl: text("payment_screenshot_url"),
+  // pending_review | approved | rejected
+  paymentScreenshotStatus: varchar("payment_screenshot_status"),
+  paymentScreenshotUploadedAt: timestamp("payment_screenshot_uploaded_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -629,6 +662,12 @@ export const siteSettings = pgTable("site_settings", {
   faviconUrl: varchar("favicon_url"),
   primaryColor: varchar("primary_color").default("#16A34A"),
   secondaryColor: varchar("secondary_color").default("#FFF9F2"),
+  upiId: varchar("upi_id"),
+  bankName: varchar("bank_name"),
+  accountNumber: varchar("account_number"),
+  ifscCode: varchar("ifsc_code"),
+  qrCodeUrl: text("qr_code_url"),
+  isOnlinePaymentEnabled: boolean("is_online_payment_enabled").default(false),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
@@ -651,8 +690,155 @@ export const insertSubscriptionSchema = createInsertSchema(milkSubscriptions);
 export const insertMilkSubscriptionSchema = createInsertSchema(milkSubscriptions);
 export const insertSupportTicketSchema = createInsertSchema(supportTickets);
 export const insertTicketMessageSchema = createInsertSchema(ticketMessages);
+export const insertAdminCustomerNoteSchema = createInsertSchema(adminCustomerNotes);
+export const insertCustomerActivityLogSchema = createInsertSchema(customerActivityLogs);
 export const insertProductSchema = createInsertSchema(products);
 export const insertBannerSchema = createInsertSchema(banners);
 export const insertHomepageSectionSchema = createInsertSchema(homepageSections);
 export const insertContactSubmissionSchema = createInsertSchema(contactSubmissions);
 export const insertSiteSettingsSchema = createInsertSchema(siteSettings);
+
+// Offers & Coupons tables
+export const offers = pgTable("offers", {
+  id: serial("id").primaryKey(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  code: varchar("code").unique(),
+  discount: varchar("discount"),
+  minOrder: integer("min_order"),
+  type: varchar("type"), // 'percentage', 'amount'
+  category: varchar("category"),
+  isActive: boolean("is_active").default(true),
+  validFrom: date("valid_from").notNull(),
+  validTo: date("valid_to").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const coupons = pgTable("coupons", {
+  id: serial("id").primaryKey(),
+  code: varchar("code").unique().notNull(),
+  discountType: varchar("discount_type").notNull(), // 'percentage', 'amount'
+  discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
+  maxDiscount: decimal("max_discount", { precision: 10, scale: 2 }),
+  minOrderValue: decimal("min_order_value", { precision: 10, scale: 2 }),
+  usageLimit: integer("usage_limit"),
+  usageCount: integer("usage_count").default(0),
+  isActive: boolean("is_active").default(true),
+  validFrom: date("valid_from").notNull(),
+  validTo: date("valid_to").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// TypeScript type exports for Storage and Repositories
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+export type UpsertUser = Partial<User> & { id: string };
+export type Category = typeof categories.$inferSelect;
+export type InsertCategory = typeof categories.$inferInsert;
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = typeof products.$inferInsert;
+export type Order = typeof orders.$inferSelect;
+export type InsertOrder = typeof orders.$inferInsert;
+export type OrderItem = typeof orderItems.$inferSelect;
+export type InsertOrderItem = typeof orderItems.$inferInsert;
+export type MilkSubscription = typeof milkSubscriptions.$inferSelect;
+export type InsertMilkSubscription = typeof milkSubscriptions.$inferInsert;
+export type Vendor = typeof vendors.$inferSelect;
+export type InsertVendor = typeof vendors.$inferInsert;
+export type DeliveryPartner = typeof deliveryPartners.$inferSelect;
+export type InsertDeliveryPartner = typeof deliveryPartners.$inferInsert;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+export type CartItem = typeof cartItems.$inferSelect;
+export type Driver = typeof drivers.$inferSelect;
+export type InsertDriver = typeof drivers.$inferInsert;
+export type Address = typeof addresses.$inferSelect;
+export type InsertAddress = typeof addresses.$inferInsert;
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = typeof supportTickets.$inferInsert;
+export type TicketMessage = typeof ticketMessages.$inferSelect;
+export type InsertTicketMessage = typeof ticketMessages.$inferInsert;
+export type Faq = typeof faqs.$inferSelect;
+export type InsertFaq = typeof faqs.$inferInsert;
+export type Offer = typeof offers.$inferSelect;
+export type InsertOffer = typeof offers.$inferInsert;
+export type Coupon = typeof coupons.$inferSelect;
+export type InsertCoupon = typeof coupons.$inferInsert;
+
+// Dynamic Content Tables
+export const blogs = pgTable("blogs", {
+  id: serial("id").primaryKey(),
+  title: varchar("title").notNull(),
+  slug: varchar("slug").unique().notNull(),
+  shortDescription: text("short_description").notNull(),
+  content: text("content").notNull(),
+  featuredImage: varchar("featured_image"),
+  keywords: text("keywords"),
+  metaTitle: varchar("meta_title"),
+  metaDescription: text("meta_description"),
+  status: varchar("status").notNull().default("Draft"), // Draft, Published, Unpublished
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const videoBlogs = pgTable("video_blogs", {
+  id: serial("id").primaryKey(),
+  title: varchar("title").notNull(),
+  slug: varchar("slug").unique().notNull(),
+  shortDescription: text("short_description").notNull(),
+  content: text("content"),
+  videoType: varchar("video_type").notNull(), // YouTube, Vimeo, Local Upload, External URL
+  videoUrl: varchar("video_url"),
+  uploadedVideo: varchar("uploaded_video"),
+  thumbnailImage: varchar("thumbnail_image"),
+  keywords: text("keywords"),
+  metaTitle: varchar("meta_title"),
+  metaDescription: text("meta_description"),
+  status: varchar("status").notNull().default("Draft"), // Draft, Published, Unpublished
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const imageGallery = pgTable("image_gallery", {
+  id: serial("id").primaryKey(),
+  title: varchar("title").notNull(),
+  image: varchar("image").notNull(),
+  altText: varchar("alt_text"),
+  category: varchar("category").notNull().default("General"),
+  sortOrder: integer("sort_order").default(0),
+  status: varchar("status").notNull().default("Published"), // Draft, Published, Unpublished
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const videoGallery = pgTable("video_gallery", {
+  id: serial("id").primaryKey(),
+  title: varchar("title").notNull(),
+  videoType: varchar("video_type").notNull(), // YouTube, Vimeo, Local Upload, External URL
+  videoUrl: varchar("video_url"),
+  uploadedVideo: varchar("uploaded_video"),
+  thumbnailImage: varchar("thumbnail_image"),
+  category: varchar("category").notNull().default("General"),
+  sortOrder: integer("sort_order").default(0),
+  status: varchar("status").notNull().default("Published"), // Draft, Published, Unpublished
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Dynamic Content Schemas & Types
+export const insertBlogSchema = createInsertSchema(blogs);
+export const insertVideoBlogSchema = createInsertSchema(videoBlogs);
+export const insertImageGallerySchema = createInsertSchema(imageGallery);
+export const insertVideoGallerySchema = createInsertSchema(videoGallery);
+
+export type Blog = typeof blogs.$inferSelect;
+export type InsertBlog = typeof blogs.$inferInsert;
+export type VideoBlog = typeof videoBlogs.$inferSelect;
+export type InsertVideoBlog = typeof videoBlogs.$inferInsert;
+export type ImageGallery = typeof imageGallery.$inferSelect;
+export type InsertImageGallery = typeof imageGallery.$inferInsert;
+export type VideoGallery = typeof videoGallery.$inferSelect;
+export type InsertVideoGallery = typeof videoGallery.$inferInsert;
+

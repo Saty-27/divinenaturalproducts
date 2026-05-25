@@ -3,6 +3,7 @@ import { db } from "../db";
 import { orders, orderItems, products, users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { requireAdminAccess } from "../middleware/auth";
+import { storage } from "../storage";
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.get("/:id", requireAdminAccess, async (req: any, res) => {
     const itemsWithProducts = await Promise.all(
       items.map(async (item) => {
         const product = await db.query.products.findFirst({
-          where: eq(products.id, item.productId),
+          where: eq(products.id, item.productId!),
         });
         return { ...item, product };
       })

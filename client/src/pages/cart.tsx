@@ -27,7 +27,7 @@ export default function CartPage() {
     queryKey: ["cart"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/cart", { credentials: "include" });
+        const res = await fetch("/api/cart", { credentials: "include", cache: "no-store" });
         if (!res.ok) throw new Error("Failed to fetch cart");
         const data = await res.json();
         return Array.isArray(data) ? data : (data.items || []);

@@ -355,15 +355,21 @@ export async function getBillInvoiceData(billId: number): Promise<InvoiceData | 
     ? JSON.parse(billRecord.items) 
     : billRecord.items;
 
-  const dueDateStr = typeof billRecord.dueDate === "string"
-    ? billRecord.dueDate
-    : billRecord.dueDate instanceof Date
-    ? billRecord.dueDate.toISOString()
-    : new Date(billRecord.dueDate).toISOString();
+  const dueDateVal = billRecord.dueDate as any;
+  const dueDateStr = typeof dueDateVal === "string"
+    ? dueDateVal
+    : dueDateVal instanceof Date
+    ? dueDateVal.toISOString()
+    : dueDateVal
+    ? new Date(dueDateVal).toISOString()
+    : "";
 
-  const createdAtStr = billRecord.createdAt instanceof Date
-    ? billRecord.createdAt.toISOString()
-    : new Date(billRecord.createdAt).toISOString();
+  const createdAtVal = billRecord.createdAt as any;
+  const createdAtStr = createdAtVal instanceof Date
+    ? createdAtVal.toISOString()
+    : createdAtVal
+    ? new Date(createdAtVal).toISOString()
+    : new Date().toISOString();
 
   return {
     billId: billRecord.id,

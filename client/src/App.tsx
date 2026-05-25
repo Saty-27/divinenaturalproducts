@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Switch, Route, useLocation } from "wouter";
+import ScrollToTop from "@/components/ScrollToTop";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -30,6 +32,10 @@ import AboutPage from "@/pages/about";
 import ContactPage from "@/pages/contact";
 import TermsPage from "@/pages/terms";
 import PrivacyPage from "@/pages/privacy";
+import BlogPage from "@/pages/blog";
+import VideoBlogPage from "@/pages/video-blog";
+import ImageGalleryPage from "@/pages/image-gallery";
+import VideoGalleryPage from "@/pages/video-gallery";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import logoImage from "@assets/WhatsApp Image 2025-08-07 at 16.06.46_1755865958874.jpg";
@@ -81,8 +87,22 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
 }
 
 function Router() {
+  const { settings } = useSiteSettings();
+
+  useEffect(() => {
+    let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.getElementsByTagName("head")[0].appendChild(link);
+    }
+    link.href = settings.logoUrl || logoImage;
+  }, [settings.logoUrl]);
+
   return (
-    <Switch>
+    <>
+      <ScrollToTop />
+      <Switch>
       {/* ADMIN LOGIN - PUBLIC */}
       <Route path="/admin/login" component={AdminLoginPage} />
       
@@ -107,6 +127,12 @@ function Router() {
       <Route path="/auth/login" component={LoginPage} />
       <Route path="/shop" component={ShopPage} />
       <Route path="/product/:id" component={ProductDetail} />
+      <Route path="/blog" component={BlogPage} />
+      <Route path="/blog/:slug" component={BlogPage} />
+      <Route path="/video-blog" component={VideoBlogPage} />
+      <Route path="/video-blog/:slug" component={VideoBlogPage} />
+      <Route path="/image-gallery" component={ImageGalleryPage} />
+      <Route path="/video-gallery" component={VideoGalleryPage} />
       <Route path="/about" component={AboutPage} />
       <Route path="/contact" component={ContactPage} />
       <Route path="/terms" component={TermsPage} />
@@ -140,7 +166,8 @@ function Router() {
       <Route path="/billing">
         {() => <ProtectedRoute component={BillingPage} />}
       </Route>
-    </Switch>
+      </Switch>
+    </>
   );
 }
 

@@ -15,21 +15,48 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 export default function SubscriptionsAdmin() {
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState("subscriptions");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     customerId: "",
     productId: "",
     quantity: "",
     frequency: "daily",
+    pricePerL: "",
   });
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+
+  const { data: deliveries = [], refetch: refetchDeliveries } = useQuery({
+    queryKey: ["admin-deliveries", selectedDate],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/subscriptions/deliveries?date=${selectedDate}`, {
+        credentials: "include",
+      });
+      return res.ok ? res.json() : [];
+    },
+  });
+
+  const { data: milkSummary, refetch: refetchSummary } = useQuery({
+    queryKey: ["admin-milk-summary", selectedDate],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/subscriptions/dashboard-summary", {
+        credentials: "include",
+      });
+      return res.ok ? res.json() : { todayRequired: 0, todayDelivered: 0, todayRemaining: 0 };
+    },
+  });
 
   const { data: subscriptions = [], isLoading, refetch } = useQuery({
     queryKey: ["admin-subscriptions", statusFilter],
@@ -60,10 +87,15 @@ export default function SubscriptionsAdmin() {
     },
   });
 
-  const addSubscriptionMutation = useMutation({
+  const saveSubscriptionMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await fetch("/api/admin/subscriptions", {
-        method: "POST",
+      const url = editingId 
+        ? `/api/admin/subscriptions/${editingId}` 
+        : "/api/admin/subscriptions";
+      const method = editingId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -73,19 +105,21 @@ export default function SubscriptionsAdmin() {
           frequency: data.frequency,
           deliveryTime: "7-8 AM",
           startDate: new Date().toISOString().split("T")[0],
+          pricePerL: data.pricePerL !== "" ? parseFloat(data.pricePerL) : undefined,
         }),
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Failed to add subscription");
+        throw new Error(error.message || "Failed to save subscription");
       }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] });
-      toast({ title: "✅ Subscription added successfully!" });
-      setShowForm(false);
-      setFormData({ customerId: "", productId: "", quantity: "", frequency: "daily" });
+      toast({ title: editingId ? "✅ Subscription updated successfully!" : "✅ Subscription added successfully!" });
+      setEditingId(null);
+      setFormData({ customerId: "", productId: "", quantity: "", frequency: "daily", pricePerL: "" });
+      setActiveTab("subscriptions");
       refetch();
     },
     onError: (error: any) => {
@@ -118,12 +152,22 @@ export default function SubscriptionsAdmin() {
   const handleEditClick = (sub: any) => {
     setEditingId(sub.id);
     setFormData({
-      customerId: sub.userId,
-      productId: sub.productId.toString(),
-      quantity: sub.quantity.toString(),
-      frequency: sub.frequency,
+      customerId: sub.userId || "",
+      productId: sub.productId ? sub.productId.toString() : "",
+      quantity: sub.quantity ? sub.quantity.toString() : "",
+      frequency: sub.frequency || "daily",
+      pricePerL: sub.pricePerL ? sub.pricePerL.toString() : "",
     });
-    setShowForm(true);
+    setActiveTab("add-subscription");
+  };
+
+  const handleProductChange = (productId: string) => {
+    const selectedProd = products.find((p: any) => p.id.toString() === productId);
+    setFormData((prev) => ({
+      ...prev,
+      productId,
+      pricePerL: selectedProd ? selectedProd.price.toString() : prev.pricePerL,
+    }));
   };
 
   const totalSubs = subscriptions.length;
@@ -142,6 +186,20 @@ export default function SubscriptionsAdmin() {
   return (
     <AdminLayout>
       <div style={{ padding: "1.5rem" }}>
+        <Tabs value={activeTab} className="space-y-6" onValueChange={(val) => { setActiveTab(val); if (val === "deliveries" || val === "subscriptions") { refetchDeliveries(); refetchSummary(); } }}>
+          <TabsList className="bg-gray-100 p-1 rounded-lg">
+            <TabsTrigger value="subscriptions" className="font-bold text-sm">
+              🥛 Manage Subscriptions
+            </TabsTrigger>
+            <TabsTrigger value="add-subscription" className="font-bold text-sm">
+              {editingId ? "✏️ Edit Subscription" : "➕ Add Subscription"}
+            </TabsTrigger>
+            <TabsTrigger value="deliveries" className="font-bold text-sm">
+              🚚 Daily Delivery Tracking
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="subscriptions" className="space-y-6">
         {/* Header & Filters */}
         <div style={{ marginBottom: "1.5rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
@@ -149,7 +207,11 @@ export default function SubscriptionsAdmin() {
               🥛 Subscriptions Management
             </h2>
             <Button
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => {
+                setEditingId(null);
+                setFormData({ customerId: "", productId: "", quantity: "", frequency: "daily", pricePerL: "" });
+                setActiveTab("add-subscription");
+              }}
               style={{
                 padding: "0.5rem 1rem",
                 background: "#16a34a",
@@ -164,105 +226,6 @@ export default function SubscriptionsAdmin() {
             </Button>
           </div>
 
-          {/* Add/Edit Subscription Form */}
-          {showForm && (
-            <div style={{ background: "#f9fafb", border: "2px solid #16a34a", borderRadius: "0.5rem", padding: "1.5rem", marginBottom: "1rem" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#111827", margin: "0 0 1rem 0" }}>
-                {editingId ? "Edit Subscription" : "Add New Subscription"}
-              </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1rem" }}>
-                <div>
-                  <label style={{ fontSize: "0.875rem", color: "#6b7280", display: "block", marginBottom: "0.5rem" }}>Customer</label>
-                  <select 
-                    value={formData.customerId}
-                    onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                    style={{ 
-                      width: "100%", 
-                      padding: "0.5rem", 
-                      border: "1px solid #d1d5db", 
-                      borderRadius: "0.375rem",
-                      fontSize: "0.875rem"
-                    }}
-                  >
-                    <option value="">Select Customer</option>
-                    {customers.map((c: any) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({c.email})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.875rem", color: "#6b7280", display: "block", marginBottom: "0.5rem" }}>Product</label>
-                  <select 
-                    value={formData.productId}
-                    onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-                    style={{ 
-                      width: "100%", 
-                      padding: "0.5rem", 
-                      border: "1px solid #d1d5db", 
-                      borderRadius: "0.375rem",
-                      fontSize: "0.875rem"
-                    }}
-                  >
-                    <option value="">Select Product</option>
-                    {products.map((p: any) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} - ₹{p.price}/{p.unit}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.875rem", color: "#6b7280", display: "block", marginBottom: "0.5rem" }}>Quantity (L)</label>
-                  <Input 
-                    type="number" 
-                    step="0.5"
-                    placeholder="1.5"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                    style={{ fontSize: "0.875rem" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.875rem", color: "#6b7280", display: "block", marginBottom: "0.5rem" }}>Frequency</label>
-                  <select 
-                    value={formData.frequency}
-                    onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                    style={{ 
-                      width: "100%", 
-                      padding: "0.5rem", 
-                      border: "1px solid #d1d5db", 
-                      borderRadius: "0.375rem",
-                      fontSize: "0.875rem"
-                    }}
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="alternate">Alternate Days</option>
-                    <option value="weekly">Weekly</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: "1rem" }}>
-                <Button 
-                  onClick={() => addSubscriptionMutation.mutate(formData)}
-                  style={{ background: "#16a34a", color: "white", padding: "0.5rem 1rem" }}
-                >
-                  ✅ {editingId ? "Update" : "Add"} Subscription
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingId(null);
-                    setFormData({ customerId: "", productId: "", quantity: "", frequency: "daily" });
-                  }}
-                  style={{ background: "#6b7280", color: "white", padding: "0.5rem 1rem" }}
-                >
-                  ✕ Cancel
-                </Button>
-              </div>
-            </div>
-          )}
 
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <button
@@ -438,7 +401,225 @@ export default function SubscriptionsAdmin() {
             </table>
           )}
         </div>
-      </div>
+      </TabsContent>
+
+      <TabsContent value="add-subscription" className="space-y-6">
+        <div style={{ background: "white", borderRadius: "0.5rem", padding: "1.5rem", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#111827", marginBottom: "1.5rem" }}>
+            {editingId ? "✏️ Edit Subscription" : "➕ Add New Subscription"}
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1.5rem", marginBottom: "1.5rem" }}>
+            <div>
+              <label style={{ fontSize: "0.875rem", fontWeight: "600", color: "#374151", display: "block", marginBottom: "0.5rem" }}>Customer</label>
+              <select 
+                value={formData.customerId}
+                onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+                style={{ 
+                  width: "100%", 
+                  padding: "0.625rem", 
+                  border: "1px solid #d1d5db", 
+                  borderRadius: "0.375rem",
+                  fontSize: "0.875rem"
+                }}
+              >
+                <option value="">Select Customer</option>
+                {customers.map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: "0.875rem", fontWeight: "600", color: "#374151", display: "block", marginBottom: "0.5rem" }}>Product</label>
+              <select 
+                value={formData.productId}
+                onChange={(e) => handleProductChange(e.target.value)}
+                style={{ 
+                  width: "100%", 
+                  padding: "0.625rem", 
+                  border: "1px solid #d1d5db", 
+                  borderRadius: "0.375rem",
+                  fontSize: "0.875rem"
+                }}
+              >
+                <option value="">Select Product</option>
+                {products.map((p: any) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} - ₹{p.price}/{p.unit}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: "0.875rem", fontWeight: "600", color: "#374151", display: "block", marginBottom: "0.5rem" }}>Quantity (L)</label>
+              <Input 
+                type="number" 
+                step="0.5"
+                placeholder="1.5"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                style={{ fontSize: "0.875rem", padding: "0.625rem" }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: "0.875rem", fontWeight: "600", color: "#374151", display: "block", marginBottom: "0.5rem" }}>Frequency</label>
+              <select 
+                value={formData.frequency}
+                onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                style={{ 
+                  width: "100%", 
+                  padding: "0.625rem", 
+                  border: "1px solid #d1d5db", 
+                  borderRadius: "0.375rem",
+                  fontSize: "0.875rem"
+                }}
+              >
+                <option value="daily">Daily</option>
+                <option value="alternate">Alternate Days</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: "0.875rem", fontWeight: "600", color: "#374151", display: "block", marginBottom: "0.5rem" }}>Price per Liter (₹)</label>
+              <Input 
+                type="number" 
+                step="0.01"
+                placeholder="0.00"
+                value={formData.pricePerL}
+                onChange={(e) => setFormData({ ...formData, pricePerL: e.target.value })}
+                style={{ fontSize: "0.875rem", padding: "0.625rem" }}
+              />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "1rem" }}>
+            <Button 
+              onClick={() => saveSubscriptionMutation.mutate(formData)}
+              disabled={saveSubscriptionMutation.isPending || !formData.customerId || !formData.productId || !formData.quantity}
+              style={{ background: "#16a34a", color: "white", padding: "0.625rem 1.25rem" }}
+            >
+              {saveSubscriptionMutation.isPending ? "Saving..." : editingId ? "✅ Update Subscription" : "✅ Add Subscription"}
+            </Button>
+            <Button 
+              onClick={() => {
+                setEditingId(null);
+                setFormData({ customerId: "", productId: "", quantity: "", frequency: "daily", pricePerL: "" });
+                setActiveTab("subscriptions");
+              }}
+              style={{ background: "#6b7280", color: "white", padding: "0.625rem 1.25rem" }}
+            >
+              ✕ Cancel
+            </Button>
+          </div>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="deliveries" className="space-y-6">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+          <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#111827", margin: 0 }}>
+            🚚 Daily Delivery Tracking
+          </h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "#4b5563" }}>Select Date:</span>
+            <Input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              style={{ width: "180px", fontSize: "0.875rem" }}
+            />
+          </div>
+        </div>
+
+        {/* Summary cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+          <div style={{ background: "white", border: "2px solid #3b82f6", borderRadius: "0.5rem", padding: "1.5rem", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0, fontWeight: "600" }}>Total Required</p>
+            <p style={{ fontSize: "1.75rem", fontWeight: "900", color: "#3b82f6", margin: "0.5rem 0 0 0" }}>{milkSummary?.todayRequired || 0} L</p>
+          </div>
+          <div style={{ background: "white", border: "2px solid #10b981", borderRadius: "0.5rem", padding: "1.5rem", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0, fontWeight: "600" }}>Total Delivered</p>
+            <p style={{ fontSize: "1.75rem", fontWeight: "900", color: "#10b981", margin: "0.5rem 0 0 0" }}>{milkSummary?.todayDelivered || 0} L</p>
+          </div>
+          <div style={{ background: "white", border: "2px solid #f59e0b", borderRadius: "0.5rem", padding: "1.5rem", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0, fontWeight: "600" }}>Total Pending</p>
+            <p style={{ fontSize: "1.75rem", fontWeight: "900", color: "#f59e0b", margin: "0.5rem 0 0 0" }}>{milkSummary?.todayRemaining || 0} L</p>
+          </div>
+        </div>
+
+        {/* Tracking Table */}
+        <div style={{ background: "white", borderRadius: "0.5rem", padding: "1.5rem", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead style={{ background: "#f3f4f6", borderBottom: "2px solid #e5e7eb" }}>
+              <tr>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Date</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Customer Name</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Subscription Quantity</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Delivery Status</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Confirmed By User</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Confirmed Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {deliveries.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "1.5rem", textAlign: "center", color: "#6b7280", fontSize: "0.875rem" }}>
+                    No deliveries found for this date.
+                  </td>
+                </tr>
+              ) : (
+                deliveries.map((del: any, idx: number) => (
+                  <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#374151" }}>
+                      {del.deliveryDate}
+                    </td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600", color: "#111827" }}>
+                      {del.customerName}
+                    </td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
+                      {del.quantity} L ({del.productName})
+                    </td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "0.25rem 0.75rem",
+                          borderRadius: "0.25rem",
+                          background: del.status === "Delivered" || del.status === "delivered" ? "#d1fae5" : "#fef3c7",
+                          color: del.status === "Delivered" || del.status === "delivered" ? "#065f46" : "#92400e",
+                          fontWeight: "600",
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        {del.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "0.25rem 0.75rem",
+                          borderRadius: "0.25rem",
+                          background: del.confirmedByUser ? "#d1fae5" : "#e5e7eb",
+                          color: del.confirmedByUser ? "#065f46" : "#374151",
+                          fontWeight: "600",
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        {del.confirmedByUser ? "Yes" : "No"}
+                      </span>
+                    </td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                      {del.confirmedAt ? new Date(del.confirmedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "-"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </TabsContent>
+    </Tabs>
+  </div>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="bg-white border-2 border-red-100 shadow-2xl rounded-3xl p-8">

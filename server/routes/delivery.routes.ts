@@ -45,7 +45,7 @@ router.post("/login", async (req: any, res) => {
       area: partner.zone,
       username: partner.username,
       phone: partner.phone,
-      profileCompleted: partner.profileCompleted || false
+      profileCompleted: !!(partner.aadhaarNumber && partner.panNumber && partner.licenseNumber)
     });
   } catch (error: any) {
     console.error("Login error:", error);
@@ -317,7 +317,7 @@ router.get("/today/:partnerId", async (req: any, res) => {
         }
 
         const customer = item && 'userId' in item ? await db.query.users.findFirst({
-          where: eq(users.id, item.userId),
+          where: eq(users.id, item.userId!),
         }) : null;
 
         return {
@@ -377,21 +377,14 @@ router.post("/:partnerId/submit-profile", async (req: any, res) => {
     // Update partner with profile data
     const updated = await db.update(deliveryPartners)
       .set({
-        dob: dob ? new Date(dob) : undefined,
-        gender: gender || undefined,
+        dob: dob ? dob : undefined,
         aadhaarNumber,
         panNumber,
         licenseNumber,
         vehicleType: vehicleNumber || undefined,
         address: address ? `${address}, ${city}, ${state} - ${pincode}` : undefined,
         zone: city || undefined,
-        bankAccountNumber: bankAccount,
-        bankIfscCode: bankIfsc || undefined,
-        bankName: bankName || undefined,
-        bankHolderName: bankHolder || undefined,
-        profileCompleted: true,
         status: "pending_verification",
-        documentsSubmittedDate: new Date(),
       })
       .where(eq(deliveryPartners.id, parseInt(partnerId)))
       .returning();

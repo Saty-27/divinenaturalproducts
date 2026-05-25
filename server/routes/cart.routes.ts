@@ -14,6 +14,7 @@ router.get("/", async (req: any, res) => {
     }
     
     const result = await cartRepository.getCartWithItems(userId);
+    res.set("Cache-Control", "no-store");
     res.json(result.items || []);
   } catch (error) {
     console.error("Error fetching cart:", error);
@@ -31,6 +32,7 @@ router.get("/summary", async (req: any, res) => {
     }
     
     const summary = await cartRepository.getCartSummary(userId);
+    res.set("Cache-Control", "no-store");
     res.json(summary);
   } catch (error) {
     console.error("Error fetching cart summary:", error);
@@ -54,6 +56,7 @@ router.post("/items", async (req: any, res) => {
     
     const { productId, quantity } = addItemSchema.parse(req.body);
     const item = await cartRepository.addOrUpdateItem(userId, productId, quantity);
+    res.set("Cache-Control", "no-store");
     res.json(item);
   } catch (error) {
     console.error("Error adding item to cart:", error);
@@ -77,6 +80,7 @@ router.patch("/items/:id", async (req: any, res) => {
     const itemId = parseInt(req.params.id);
     const { quantity } = updateItemSchema.parse(req.body);
     const item = await cartRepository.updateItemQuantity(userId, itemId, quantity);
+    res.set("Cache-Control", "no-store");
     res.json(item);
   } catch (error) {
     console.error("Error updating cart item:", error);
@@ -95,6 +99,7 @@ router.delete("/items/:id", async (req: any, res) => {
     
     const itemId = parseInt(req.params.id);
     await cartRepository.removeItem(userId, itemId);
+    res.set("Cache-Control", "no-store");
     res.json({ success: true });
   } catch (error) {
     console.error("Error removing cart item:", error);
@@ -112,7 +117,8 @@ router.delete("/", async (req: any, res) => {
     }
     
     await cartRepository.clearCart(userId);
-    res.json({ success: true });
+    res.set("Cache-Control", "no-store");
+    res.json({ success: true, items: [], summary: { subtotal: 0, deliveryFee: 0, discount: 0, total: 0, itemCount: 0 } });
   } catch (error) {
     console.error("Error clearing cart:", error);
     res.status(500).json({ message: "Failed to clear cart" });

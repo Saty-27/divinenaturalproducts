@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import MainPageLayout from "@/components/layout/main-page-layout";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { ShoppingCart, CreditCard } from "lucide-react";
 import logoImage from "@assets/WhatsApp Image 2025-08-07 at 16.06.46_1755865958874.jpg";
 
 interface Product {

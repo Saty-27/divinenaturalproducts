@@ -21,7 +21,9 @@ import {
   Image,
   Layout,
   FileText,
-  Palette
+  Palette,
+  Film,
+  Play
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoImage from "@assets/WhatsApp Image 2025-08-07 at 16.06.46_1755865958874.jpg";
@@ -43,6 +45,10 @@ const adminTabs = [
   { id: "stock-history", label: "Stock History", icon: BarChart3, path: "/admin/stock-history" },
   { id: "vendors", label: "Vendors", icon: Store, path: "/admin/vendors" },
   { id: "delivery", label: "Delivery Partners", icon: Truck, path: "/admin/delivery" },
+  { id: "blogs", label: "Blog Management", icon: FileText, path: "/admin/blogs" },
+  { id: "video-blogs", label: "Video Blog Management", icon: Film, path: "/admin/video-blogs" },
+  { id: "image-gallery", label: "Image Gallery", icon: Image, path: "/admin/image-gallery" },
+  { id: "video-gallery", label: "Video Gallery", icon: Play, path: "/admin/video-gallery" },
   { id: "brand", label: "Brand Identity", icon: Palette, path: "/admin/brand" },
 ];
 
@@ -56,7 +62,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { logout } = useAdminAuth();
   const { settings } = useSiteSettings();
 
-  const currentTab = adminTabs.find(tab => tab.path === location) || adminTabs[0];
+  const isTabActive = (path: string) =>
+    path === "/admin"
+      ? location === "/admin" || location === "/admin/dashboard"
+      : location === path || location.startsWith(`${path}/`);
+  const currentTab = adminTabs.find(tab => isTabActive(tab.path)) || adminTabs[0];
 
   const handleLogout = async () => {
     await logout();
@@ -131,7 +141,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <nav className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-1 lg:space-y-2">
             {adminTabs.map((tab) => {
               const Icon = tab.icon;
-              const isActive = location === tab.path;
+              const isActive = isTabActive(tab.path);
               
               return (
                 <Link key={tab.id} href={tab.path}>

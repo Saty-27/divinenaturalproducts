@@ -60,7 +60,7 @@ import {
   Hourglass
 } from "lucide-react";
 import AdminLayout from "@/components/layout/admin-layout";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import logoImage from "@assets/WhatsApp Image 2025-08-07 at 16.06.46_1755865958874.jpg";
 import { CalendarWidget } from "@/components/ui/calendar-widget";
@@ -429,6 +429,23 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
     },
     retry: false,
   });
+
+  // Fetch dynamic milk summary stats
+  const { data: milkSummary } = useQuery({
+    queryKey: ["/api/admin/subscriptions/dashboard-summary"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/subscriptions/dashboard-summary", { credentials: "include" });
+      return res.ok ? res.json() : {
+        todayRequired: 0,
+        todayDelivered: 0,
+        todayRemaining: 0,
+        tomorrowRequired: 0,
+        activeSubscriptionsCount: 0,
+        pendingDeliveriesTodayCount: 0
+      };
+    },
+    retry: false,
+  });
   
   // Fetch categories for dashboard stats
   const { data: categories = [] } = useQuery({
@@ -460,14 +477,30 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 pt-0">
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
             <div className="p-4 border rounded-lg bg-blue-50">
-              <p className="text-sm text-blue-600">Total Liters Today</p>
-              <p className="text-2xl font-black text-blue-700">{todayReqs?.totalLitersNeeded || 0}L</p>
+              <p className="text-xs text-blue-600 font-semibold">Today Required Milk</p>
+              <p className="text-xl font-black text-blue-700">{milkSummary?.todayRequired || 0}L</p>
             </div>
             <div className="p-4 border rounded-lg bg-green-50">
-              <p className="text-sm text-green-600">Total Deliveries</p>
-              <p className="text-2xl font-black text-green-700">{todayReqs?.totalDeliveries || 0}</p>
+              <p className="text-xs text-green-600 font-semibold">Today Delivered Milk</p>
+              <p className="text-xl font-black text-green-700">{milkSummary?.todayDelivered || 0}L</p>
+            </div>
+            <div className="p-4 border rounded-lg bg-orange-50">
+              <p className="text-xs text-orange-600 font-semibold">Today Remaining Milk</p>
+              <p className="text-xl font-black text-orange-700">{milkSummary?.todayRemaining || 0}L</p>
+            </div>
+            <div className="p-4 border rounded-lg bg-purple-50">
+              <p className="text-xs text-purple-600 font-semibold">Tomorrow Required Milk</p>
+              <p className="text-xl font-black text-purple-700">{milkSummary?.tomorrowRequired || 0}L</p>
+            </div>
+            <div className="p-4 border rounded-lg bg-indigo-50">
+              <p className="text-xs text-indigo-600 font-semibold">Active Subscriptions</p>
+              <p className="text-xl font-black text-indigo-700">{milkSummary?.activeSubscriptionsCount || 0}</p>
+            </div>
+            <div className="p-4 border rounded-lg bg-amber-50">
+              <p className="text-xs text-amber-600 font-semibold">Pending Deliveries Today</p>
+              <p className="text-xl font-black text-amber-700">{milkSummary?.pendingDeliveriesTodayCount || 0}</p>
             </div>
           </div>
 
@@ -535,6 +568,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend="Across all zones"
           color="text-blue-600"
           bgColor="bg-blue-50"
+          path="/admin/vendors"
         />
         <StatsCard
           title="Total Orders"
@@ -543,6 +577,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend={`${pendingOrders} pending`}
           color="text-green-600"
           bgColor="bg-green-50"
+          path="/admin/orders"
         />
         <StatsCard
           title="Delivery Partners"
@@ -551,6 +586,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend={`${activeDeliveryPartners} active today`}
           color="text-purple-600"
           bgColor="bg-purple-50"
+          path="/admin/delivery"
         />
         <StatsCard
           title="Total Customers"
@@ -559,6 +595,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend={`+${newCustomersThisWeek} this week`}
           color="text-orange-600"
           bgColor="bg-orange-50"
+          path="/admin/customers"
         />
       </div>
 
@@ -571,6 +608,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend="Total distributed"
           color="text-blue-600"
           bgColor="bg-blue-50"
+          path="/admin/subscriptions"
         />
         <StatsCard
           title="Total Revenue"
@@ -579,6 +617,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend="All time"
           color="text-green-600"
           bgColor="bg-green-50"
+          path="/admin/billing"
         />
         <StatsCard
           title="Weekly Revenue"
@@ -587,6 +626,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend="Last 7 days"
           color="text-purple-600"
           bgColor="bg-purple-50"
+          path="/admin/billing"
         />
         <StatsCard
           title="Monthly Revenue"
@@ -595,6 +635,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend="Last 30 days"
           color="text-orange-600"
           bgColor="bg-orange-50"
+          path="/admin/billing"
         />
       </div>
 
@@ -607,6 +648,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend={`${activeProducts} active, ${inactiveProducts} inactive`}
           color="text-emerald-600"
           bgColor="bg-emerald-50"
+          path="/admin/inventory"
         />
         <StatsCard
           title="Active Products"
@@ -615,6 +657,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend="Ready to sell"
           color="text-green-600"
           bgColor="bg-green-50"
+          path="/admin/inventory"
         />
         <StatsCard
           title="Total Categories"
@@ -623,6 +666,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend={`${activeCategories} active, ${inactiveCategories} inactive`}
           color="text-indigo-600"
           bgColor="bg-indigo-50"
+          path="/admin/categories"
         />
         <StatsCard
           title="Active Categories"
@@ -631,6 +675,7 @@ function DashboardOverviewContent({ totalOrders, pendingOrders, totalRevenue, we
           trend="In use for products"
           color="text-blue-600"
           bgColor="bg-blue-50"
+          path="/admin/categories"
         />
       </div>
 
@@ -2516,11 +2561,12 @@ interface StatsCardProps {
   trend: string;
   color: string;
   bgColor: string;
+  path?: string;
 }
 
-function StatsCard({ title, value, icon, trend, color, bgColor }: StatsCardProps) {
-  return (
-    <Card className="stats-card group cursor-pointer">
+function StatsCard({ title, value, icon, trend, color, bgColor, path }: StatsCardProps) {
+  const cardContent = (
+    <Card className="stats-card group cursor-pointer hover:shadow-md transition-all duration-300">
       <CardContent className="p-4 sm:p-6">
         <div className="flex items-center justify-between mb-3 sm:mb-4">
           <div className={`p-2 sm:p-3 rounded-xl ${bgColor} group-hover:scale-110 transition-transform duration-300`}>
@@ -2537,6 +2583,12 @@ function StatsCard({ title, value, icon, trend, color, bgColor }: StatsCardProps
       </CardContent>
     </Card>
   );
+
+  if (path) {
+    return <Link href={path}>{cardContent}</Link>;
+  }
+
+  return cardContent;
 }
 
 interface ActivityItemProps {

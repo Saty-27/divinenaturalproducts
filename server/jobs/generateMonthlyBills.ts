@@ -66,12 +66,12 @@ export async function generateMonthlyBills() {
 
       for (const delivery of subscriptionDeliveries_list) {
         const sub = await db.query.milkSubscriptions.findFirst({
-          where: eq(milkSubscriptions.id, delivery.subscriptionId),
+          where: eq(milkSubscriptions.id, delivery.subscriptionId!),
         });
 
         if (sub) {
           const product = await db.query.products.findFirst({
-            where: eq(products.id, sub.productId),
+            where: eq(products.id, sub.productId!),
           });
 
           const total = Number(delivery.quantity) * Number(product?.price || 0);
@@ -94,7 +94,7 @@ export async function generateMonthlyBills() {
         ordersTotal += orderAmount;
 
         billItems.push({
-          date: new Date(order.createdAt).toISOString().split("T")[0],
+          date: order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
           description: `Order #${order.id}`,
           quantity: 1,
           price: orderAmount,

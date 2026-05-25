@@ -42,7 +42,7 @@ import {
   User
 } from "lucide-react";
 import SubAdminLayout from "@/components/layout/sub-admin-layout";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { CalendarWidget } from "@/components/ui/calendar-widget";
 import { RevenueChart, OrdersChart, ProductDistributionChart, DeliveryPerformanceChart } from "@/components/charts/sales-charts";
 import { DataTable } from "@/components/ui/data-table";
@@ -241,6 +241,7 @@ function DashboardOverviewContent({ tomorrowMilkRequirement, totalOrders, pendin
           trend="Across all zones"
           color="text-blue-600"
           bgColor="bg-blue-50"
+          path="/sub-admin/vendors"
         />
         <StatsCard
           title="Subvendors"
@@ -249,6 +250,7 @@ function DashboardOverviewContent({ tomorrowMilkRequirement, totalOrders, pendin
           trend="Branch network"
           color="text-green-600"
           bgColor="bg-green-50"
+          path="/sub-admin/subvendors"
         />
         <StatsCard
           title="Delivery Partners"
@@ -257,6 +259,7 @@ function DashboardOverviewContent({ tomorrowMilkRequirement, totalOrders, pendin
           trend={`${activeDeliveryPartners} active today`}
           color="text-purple-600"
           bgColor="bg-purple-50"
+          path="/sub-admin/delivery"
         />
         <StatsCard
           title="Total Customers"
@@ -265,6 +268,7 @@ function DashboardOverviewContent({ tomorrowMilkRequirement, totalOrders, pendin
           trend="+15 this week"
           color="text-orange-600"
           bgColor="bg-orange-50"
+          path="/sub-admin/customers"
         />
       </div>
 
@@ -277,6 +281,7 @@ function DashboardOverviewContent({ tomorrowMilkRequirement, totalOrders, pendin
           trend={`Target: ${tomorrowMilkRequirement}L`}
           color="text-blue-600"
           bgColor="bg-blue-50"
+          path="/sub-admin/circulation"
         />
         <StatsCard
           title="Today's Revenue"
@@ -285,6 +290,7 @@ function DashboardOverviewContent({ tomorrowMilkRequirement, totalOrders, pendin
           trend="+12% vs yesterday"
           color="text-green-600"
           bgColor="bg-green-50"
+          path="/sub-admin/finance"
         />
         <StatsCard
           title="Weekly Revenue"
@@ -293,6 +299,7 @@ function DashboardOverviewContent({ tomorrowMilkRequirement, totalOrders, pendin
           trend="+8% vs last week"
           color="text-purple-600"
           bgColor="bg-purple-50"
+          path="/sub-admin/finance"
         />
         <StatsCard
           title="Monthly Revenue"
@@ -301,6 +308,7 @@ function DashboardOverviewContent({ tomorrowMilkRequirement, totalOrders, pendin
           trend="+18% vs last month"
           color="text-orange-600"
           bgColor="bg-orange-50"
+          path="/sub-admin/finance"
         />
       </div>
 
@@ -364,9 +372,9 @@ function DashboardOverviewContent({ tomorrowMilkRequirement, totalOrders, pendin
 }
 
 // Stats Card Component
-function StatsCard({ title, value, icon, trend, color, bgColor }: any) {
-  return (
-    <Card className={`${bgColor} border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105`}>
+function StatsCard({ title, value, icon, trend, color, bgColor, path }: any) {
+  const cardContent = (
+    <Card className={`${bgColor} border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer`}>
       <CardContent className="p-4 sm:p-6">
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
@@ -381,6 +389,12 @@ function StatsCard({ title, value, icon, trend, color, bgColor }: any) {
       </CardContent>
     </Card>
   );
+
+  if (path) {
+    return <Link href={path}>{cardContent}</Link>;
+  }
+
+  return cardContent;
 }
 
 // Placeholder content components

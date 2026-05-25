@@ -7,13 +7,26 @@ import { isAuthenticated } from "../replitAuth";
 const router = Router();
 router.use(isAuthenticated);
 
+const toAmount = (value: unknown) => {
+  const amount = Number.parseFloat(`${value ?? 0}`);
+  return Number.isFinite(amount) ? amount : 0;
+};
+
+const getMonthlyDeliveryCount = (frequency?: string | null) => {
+  const normalized = `${frequency || "daily"}`.toLowerCase().trim();
+  if (normalized.includes("week")) return 4;
+  if (normalized.includes("alternate") || normalized.includes("every other")) return 15;
+  if (normalized.includes("month")) return 1;
+  return 30;
+};
+
 // POST - Create subscription
 router.post("/", async (req: any, res) => {
   try {
     const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const { productId, quantity, frequency, deliveryTime, startDate } = req.body;
+    const { productId, quantity, frequency, deliveryTime } = req.body;
     const productIdInt = parseInt(productId);
 
     // Get product for pricing
@@ -25,18 +38,21 @@ router.post("/", async (req: any, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    // Force start date to tomorrow (next day)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    const deliveryStartDate = new Date(tomorrowStr);
+
     const newSub = await db.insert(milkSubscriptions).values({
       userId,
       productId: productIdInt,
-      quantity: parseFloat(quantity).toString(),
+      quantity: parseInt(quantity),
       frequency,
       deliveryTime,
-      startDate: new Date(startDate),
+      startDate: tomorrowStr,
       status: "ACTIVE",
-      isActive: true,
-      isPaused: false,
       pricePerL: product.price,
-      nextDeliveryDate: new Date(startDate),
     }).returning();
 
     res.status(201).json({ message: "Subscription created", subscription: newSub[0] });
@@ -57,13 +73,35 @@ router.get("/me", async (req: any, res) => {
       .from(milkSubscriptions)
       .where(eq(milkSubscriptions.userId, userId));
 
-    // Get product details for each subscription
+    const todayStr = new Date().toISOString().split("T")[0];
+    const todayDate = new Date(todayStr);
+
+    // Get product details and today's delivery status for each subscription
     const subscriptionsWithProducts = await Promise.all(
       subscriptions.map(async (sub) => {
-        const product = await db.query.products.findFirst({
+        const product = sub.productId ? await db.query.products.findFirst({
           where: eq(products.id, sub.productId),
+        }) : undefined;
+        const perDeliveryAmount = toAmount(sub.pricePerL || product?.price) * toAmount(sub.quantity || 1);
+        const monthlyDeliveryCount = getMonthlyDeliveryCount(sub.frequency);
+
+        // Fetch today's delivery status
+        const todayDelivery = await db.query.subscriptionDeliveries.findFirst({
+          where: and(
+            eq(subscriptionDeliveries.subscriptionId, sub.id),
+            eq(subscriptionDeliveries.deliveryDate, todayStr)
+          )
         });
-        return { ...sub, product };
+
+        return {
+          ...sub,
+          product,
+          perDeliveryAmount,
+          monthlyDeliveryCount,
+          monthlyAmount: perDeliveryAmount * monthlyDeliveryCount,
+          todayDeliveryStatus: todayDelivery ? todayDelivery.status : "Pending",
+          todayDeliveryConfirmed: todayDelivery ? todayDelivery.confirmedByUser : false,
+        };
       })
     );
 
@@ -71,6 +109,78 @@ router.get("/me", async (req: any, res) => {
   } catch (error) {
     console.error("Error fetching subscriptions:", error);
     res.status(500).json({ message: "Failed to fetch subscriptions" });
+  }
+});
+
+// POST - Confirm today's milk delivery
+router.post("/:id/confirm-delivery", async (req: any, res) => {
+  try {
+    const userId = req.session?.userId || req.user?.claims?.sub;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const subscriptionId = parseInt(req.params.id);
+    const todayStr = new Date().toISOString().split("T")[0];
+    const todayDate = new Date(todayStr);
+
+    // Fetch subscription
+    const subscription = await db.query.milkSubscriptions.findFirst({
+      where: and(
+        eq(milkSubscriptions.id, subscriptionId),
+        eq(milkSubscriptions.userId, userId)
+      )
+    });
+
+    if (!subscription) {
+      return res.status(404).json({ message: "Subscription not found" });
+    }
+
+    if (subscription.status !== "ACTIVE") {
+      return res.status(400).json({ message: "Subscription is not active" });
+    }
+
+    // Check if delivery record already exists for today
+    const existingDelivery = await db.query.subscriptionDeliveries.findFirst({
+      where: and(
+        eq(subscriptionDeliveries.subscriptionId, subscriptionId),
+        eq(subscriptionDeliveries.deliveryDate, todayStr)
+      )
+    });
+
+    if (existingDelivery) {
+      if (existingDelivery.confirmedByUser) {
+        return res.status(400).json({ message: "Milk delivery already confirmed for today" });
+      }
+
+      const updated = await db
+        .update(subscriptionDeliveries)
+        .set({
+          status: "Delivered",
+          confirmedByUser: true,
+          confirmedAt: new Date()
+        })
+        .where(eq(subscriptionDeliveries.id, existingDelivery.id))
+        .returning();
+
+      return res.json({ message: "Today's delivery marked as received", delivery: updated[0] });
+    } else {
+      const newDelivery = await db
+        .insert(subscriptionDeliveries)
+        .values({
+          subscriptionId,
+          userId,
+          deliveryDate: todayStr,
+          quantity: subscription.quantity,
+          status: "Delivered",
+          confirmedByUser: true,
+          confirmedAt: new Date()
+        })
+        .returning();
+
+      return res.json({ message: "Today's delivery marked as received", delivery: newDelivery[0] });
+    }
+  } catch (error) {
+    console.error("Error confirming delivery:", error);
+    res.status(500).json({ message: "Failed to confirm delivery" });
   }
 });
 
@@ -110,7 +220,7 @@ router.put("/:id/pause", async (req: any, res) => {
 
     const updated = await db
       .update(milkSubscriptions)
-      .set({ status: "PAUSED", isPaused: true })
+      .set({ status: "PAUSED" })
       .where(and(eq(milkSubscriptions.id, subscriptionId), eq(milkSubscriptions.userId, userId)))
       .returning();
 
@@ -135,7 +245,7 @@ router.put("/:id/resume", async (req: any, res) => {
 
     const updated = await db
       .update(milkSubscriptions)
-      .set({ status: "ACTIVE", isPaused: false })
+      .set({ status: "ACTIVE" })
       .where(and(eq(milkSubscriptions.id, subscriptionId), eq(milkSubscriptions.userId, userId)))
       .returning();
 
@@ -163,7 +273,7 @@ router.put("/:id/skip-tomorrow", async (req: any, res) => {
     await db.insert(subscriptionDeliveries).values({
       subscriptionId,
       userId,
-      deliveryDate: tomorrow,
+      deliveryDate: tomorrow.toISOString().split("T")[0],
       quantity: 0,
       status: "SKIPPED",
     });

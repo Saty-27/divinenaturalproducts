@@ -13,8 +13,45 @@ interface Subscription {
   deliveryTime: string;
   status: string;
   startDate: string;
+  pricePerL?: string;
   product?: { name: string; price: string; description: string };
+  perDeliveryAmount?: number | string;
+  monthlyAmount?: number | string;
+  monthlyDeliveryCount?: number;
 }
+
+const toAmount = (value: unknown) => {
+  const amount = Number.parseFloat(`${value ?? 0}`);
+  return Number.isFinite(amount) ? amount : 0;
+};
+
+const getMonthlyDeliveryCount = (frequency?: string) => {
+  const normalized = `${frequency || "daily"}`.toLowerCase().trim();
+  if (normalized.includes("week")) return 4;
+  if (normalized.includes("alternate") || normalized.includes("every other")) return 15;
+  if (normalized.includes("month")) return 1;
+  return 30;
+};
+
+const getDailySubscriptionCost = (subscription: any) => {
+  const perDeliveryAmount = toAmount(subscription.perDeliveryAmount);
+  if (perDeliveryAmount > 0) return perDeliveryAmount;
+
+  const price = toAmount(subscription.pricePerL || subscription.product?.price);
+  const quantity = toAmount(subscription.quantity || 1);
+  return price * quantity;
+};
+
+const getMonthlySubscriptionCost = (subscription: any) => {
+  const monthlyAmount = toAmount(subscription.monthlyAmount);
+  const perDeliveryCost = getDailySubscriptionCost(subscription);
+
+  if (monthlyAmount > perDeliveryCost) {
+    return monthlyAmount;
+  }
+
+  return perDeliveryCost * getMonthlyDeliveryCount(subscription.frequency);
+};
 
 export default function SubscriptionPage() {
   const [, setLocation] = useLocation();
@@ -50,7 +87,7 @@ export default function SubscriptionPage() {
     queryKey: ["user-subscriptions"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/subscriptions/me", { credentials: "include" });
+        const res = await fetch("/api/subscriptions/me", { credentials: "include", cache: "no-store" });
         const data = res.ok ? await res.json() : [];
         console.log("Subscriptions fetched:", data);
         return Array.isArray(data) ? data : [];
@@ -93,12 +130,30 @@ export default function SubscriptionPage() {
     }
   };
 
+  const handleConfirmDelivery = async (subId: number) => {
+    try {
+      const res = await fetch(`/api/subscriptions/${subId}/confirm-delivery`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        toast({ title: "✅ Milk delivery confirmed for today!" });
+        refetch();
+      } else {
+        const err = await res.json();
+        toast({ title: `❌ ${err.message || "Failed to confirm delivery"}`, variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "❌ Error confirming delivery", variant: "destructive" });
+    }
+  };
+
   const totalMonthly = subscriptions.reduce((sum: number, s: any) => {
-    const price = parseFloat(s.product?.price || "0");
-    return sum + price * parseFloat(s.quantity || 1);
+    if (`${s.status}`.toUpperCase() !== "ACTIVE") return sum;
+    return sum + getMonthlySubscriptionCost(s);
   }, 0);
 
-  const activeCount = subscriptions.filter((s: any) => s.status === "ACTIVE").length;
+  const activeCount = subscriptions.filter((s: any) => `${s.status}`.toUpperCase() === "ACTIVE").length;
 
   if (isLoading) {
     return (
@@ -182,13 +237,13 @@ export default function SubscriptionPage() {
                   <div className="text-right">
                     <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black mb-1">Total Price</p>
                     <p className="text-xl font-black text-green-600">
-                      ₹{(parseFloat(sub.product?.price || "0") * parseFloat(sub.quantity || 1)).toLocaleString()}
+                      ₹{getDailySubscriptionCost(sub).toLocaleString()}
                     </p>
                     <p className="text-gray-400 text-xs mt-1">per {sub.frequency}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 py-4 border-t border-gray-100">
+                <div className="grid grid-cols-3 gap-4 py-4 border-t border-gray-100">
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black mb-2">Status</p>
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
@@ -203,6 +258,16 @@ export default function SubscriptionPage() {
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black mb-2">Delivery Time</p>
                     <p className="text-sm font-bold text-gray-900">{sub.deliveryTime || "Morning"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black mb-2">Today's Delivery</p>
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                      sub.todayDeliveryStatus === "Delivered" || sub.todayDeliveryConfirmed
+                        ? "bg-green-100 text-green-700" 
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}>
+                      {sub.todayDeliveryStatus || "Pending"}
+                    </span>
                   </div>
                 </div>
 
@@ -227,6 +292,26 @@ export default function SubscriptionPage() {
                     </button>
                   )}
                 </div>
+
+                {sub.status === "ACTIVE" && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    {sub.todayDeliveryConfirmed ? (
+                      <Button
+                        disabled
+                        className="w-full bg-gray-100 text-gray-400 font-bold py-2 rounded-xl cursor-not-allowed border-none hover:bg-gray-100"
+                      >
+                        ✓ Today's delivery marked as received
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => handleConfirmDelivery(sub.id)}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-xl transition-all shadow-md hover:shadow-lg"
+                      >
+                        🥛 Mark Milk Delivered Today
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

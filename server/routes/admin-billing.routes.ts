@@ -20,12 +20,9 @@ router.get("/", async (req: any, res) => {
       whereConditions.push(eq(bills.userId, userId));
     }
 
-    let query = db.select().from(bills);
-    if (whereConditions.length > 0) {
-      query = query.where(and(...whereConditions));
-    }
-
-    const allBills = await query;
+    const allBills = whereConditions.length > 0
+      ? await db.select().from(bills).where(and(...whereConditions))
+      : await db.select().from(bills);
     
     // Fetch user details for each bill
     const billsWithUsers = await Promise.all(
@@ -44,8 +41,33 @@ router.get("/", async (req: any, res) => {
   }
 });
 
+// GET all bills that have a payment screenshot uploaded (must be before /:id)
+router.get("/payment-screenshots", async (req: any, res) => {
+  try {
+    const pendingBills = await db
+      .select()
+      .from(bills)
+      .where(sql`payment_screenshot_url IS NOT NULL`);
+
+    const billsWithUsers = await Promise.all(
+      pendingBills.map(async (bill) => {
+        const user = await db.query.users.findFirst({
+          where: eq(users.id, bill.userId),
+        });
+        return { ...bill, user };
+      })
+    );
+
+    res.json(billsWithUsers);
+  } catch (error) {
+    console.error("Error fetching payment screenshots:", error);
+    res.status(500).json({ message: "Failed to fetch payment screenshots" });
+  }
+});
+
 // GET bill by ID
 router.get("/:id", async (req: any, res) => {
+
   try {
     const billId = parseInt(req.params.id);
     const bill = await db.query.bills.findFirst({
@@ -321,6 +343,90 @@ router.post("/generate", async (req: any, res) => {
   } catch (error) {
     console.error("Error generating bill:", error);
     res.status(500).json({ message: "Failed to generate bill" });
+  }
+});
+
+// POST admin upload a bill PDF for a user
+router.post("/:id/upload-bill", async (req: any, res) => {
+  try {
+    const billId = parseInt(req.params.id);
+    const { billPdfUrl } = req.body;
+
+    if (!billPdfUrl) {
+      return res.status(400).json({ message: "billPdfUrl is required" });
+    }
+
+    const updated = await db
+      .update(bills)
+      .set({ billPdfUrl, updatedAt: sql`now()` })
+      .where(eq(bills.id, billId))
+      .returning();
+
+    if (!updated.length) {
+      return res.status(404).json({ message: "Bill not found" });
+    }
+
+    res.json({ success: true, bill: updated[0], message: "Bill PDF uploaded" });
+  } catch (error) {
+    console.error("Error uploading bill PDF:", error);
+    res.status(500).json({ message: "Failed to upload bill PDF" });
+  }
+});
+
+
+
+// POST admin approves screenshot → marks bill as paid
+router.post("/:id/approve-screenshot", async (req: any, res) => {
+  try {
+    const billId = parseInt(req.params.id);
+
+    const updated = await db
+      .update(bills)
+      .set({
+        paymentScreenshotStatus: "approved",
+        status: "paid",
+        paymentDate: sql`now()`,
+        paymentMethod: "online_transfer",
+        updatedAt: sql`now()`,
+      })
+      .where(eq(bills.id, billId))
+      .returning();
+
+    if (!updated.length) {
+      return res.status(404).json({ message: "Bill not found" });
+    }
+
+    res.json({ success: true, bill: updated[0], message: "Screenshot approved – bill marked as paid" });
+  } catch (error) {
+    console.error("Error approving screenshot:", error);
+    res.status(500).json({ message: "Failed to approve screenshot" });
+  }
+});
+
+// POST admin rejects screenshot
+router.post("/:id/reject-screenshot", async (req: any, res) => {
+  try {
+    const billId = parseInt(req.params.id);
+    const { reason } = req.body;
+
+    const updated = await db
+      .update(bills)
+      .set({
+        paymentScreenshotStatus: "rejected",
+        notes: reason ? `Screenshot rejected: ${reason}` : "Screenshot rejected by admin",
+        updatedAt: sql`now()`,
+      })
+      .where(eq(bills.id, billId))
+      .returning();
+
+    if (!updated.length) {
+      return res.status(404).json({ message: "Bill not found" });
+    }
+
+    res.json({ success: true, bill: updated[0], message: "Screenshot rejected" });
+  } catch (error) {
+    console.error("Error rejecting screenshot:", error);
+    res.status(500).json({ message: "Failed to reject screenshot" });
   }
 });
 

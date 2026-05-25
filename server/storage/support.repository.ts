@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { supportTickets, ticketMessages } from "@shared/schema";
+import { supportTickets, ticketMessages, faqs } from "@shared/schema";
 import type { InsertSupportTicket, InsertTicketMessage, SupportTicket, TicketMessage, Faq } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
@@ -37,7 +37,7 @@ export class SupportRepository {
     await db
       .update(supportTickets)
       .set({ updatedAt: new Date() })
-      .where(eq(supportTickets.id, data.ticketId));
+      .where(eq(supportTickets.id, data.ticketId as number));
     
     return message;
   }

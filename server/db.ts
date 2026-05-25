@@ -24,4 +24,4 @@ if (isNeon) {
 
 export const db = isNeon
   ? neonDrizzle({ client: pool as NeonPool, schema })
-  : pgDrizzle({ client: pool as PgPool, schema });
+  : pgDrizzle({ client: pool as any, schema });

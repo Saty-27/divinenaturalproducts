@@ -2,15 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import { UserRole } from '@shared/types';
 import { storage } from '../storage';
 
-// Extend Express Request to include user
+// Extend Express User
 declare global {
   namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        role: UserRole;
-        claims: any;
-      };
+    interface User {
+      id: string;
+      role: UserRole;
+      claims?: any;
     }
   }
 }

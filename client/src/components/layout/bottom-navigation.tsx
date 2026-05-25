@@ -1,9 +1,21 @@
 import { Home, Calendar, ShoppingCart, Package, User } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
 
 export default function BottomNavigation() {
   const [location] = useLocation();
+  const { data: cartItems = [] } = useQuery({
+    queryKey: ["cart"],
+    queryFn: async () => {
+      const res = await fetch("/api/cart", { credentials: "include", cache: "no-store" });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : data.items || [];
+    },
+  });
+
+  const cartCount = cartItems.reduce((sum: number, item: any) => sum + Number(item.quantity || 0), 0);
 
   const navItems = [
     {
@@ -23,7 +35,7 @@ export default function BottomNavigation() {
       icon: ShoppingCart,
       label: "Shop",
       isActive: location === "/shop",
-      badge: 3, // Sample cart count
+      badge: cartCount,
     },
     {
       href: "/orders",
@@ -58,7 +70,7 @@ export default function BottomNavigation() {
                 <span className="text-xs font-medium">{item.label}</span>
                 
                 {/* Badge for cart */}
-                {item.badge && (
+                {item.badge > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {item.badge}
                   </span>

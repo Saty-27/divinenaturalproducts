@@ -20,6 +20,7 @@ app.use(fileUpload());
 app.use('/banners', express.static(path.join(process.cwd(), 'public', 'banners')));
 app.use('/products', express.static(path.join(process.cwd(), 'public', 'products')));
 app.use('/icons', express.static(path.join(process.cwd(), 'public', 'icons')));
+app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
 
 app.use((req, res, next) => {

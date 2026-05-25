@@ -20,6 +20,7 @@ __export(schema_exports, {
   aboutUsSettings: () => aboutUsSettings,
   addresses: () => addresses,
   addressesRelations: () => addressesRelations,
+  adminCustomerNotes: () => adminCustomerNotes,
   admins: () => admins,
   adminsRelations: () => adminsRelations,
   banners: () => banners,
@@ -32,6 +33,7 @@ __export(schema_exports, {
   categories: () => categories,
   contactSettings: () => contactSettings,
   contactSubmissions: () => contactSubmissions,
+  customerActivityLogs: () => customerActivityLogs,
   delegationLogs: () => delegationLogs,
   deliveryAssignments: () => deliveryAssignments,
   deliveryPartners: () => deliveryPartners,
@@ -43,8 +45,10 @@ __export(schema_exports, {
   footerSettings: () => footerSettings,
   homepageSections: () => homepageSections,
   insertAddressSchema: () => insertAddressSchema,
+  insertAdminCustomerNoteSchema: () => insertAdminCustomerNoteSchema,
   insertBannerSchema: () => insertBannerSchema,
   insertContactSubmissionSchema: () => insertContactSubmissionSchema,
+  insertCustomerActivityLogSchema: () => insertCustomerActivityLogSchema,
   insertHomepageSectionSchema: () => insertHomepageSectionSchema,
   insertMilkSubscriptionSchema: () => insertMilkSubscriptionSchema,
   insertOrderSchema: () => insertOrderSchema,
@@ -93,7 +97,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
-var sessions, users2, categories, products, vendors, deliveryPartners, deliveryAssignments, drivers, admins, delegationLogs, orders, orderItems, milkSubscriptions, subscriptionDeliveries, cart, cartItems, addresses, supportTickets, ticketMessages, productVendors, notifications, bills, subscriptionsRelations, subscriptionDeliveriesRelations, ordersRelations, orderItemsRelations, vendorsRelations, deliveryPartnersRelations, driversRelations, adminsRelations, cartRelations, cartItemsRelations, addressesRelations, productVendorsRelations, billsRelations, banners, homepageSections, ethosCards, productDeals, statsCounters, faqs2, newsletterSettings, footerSettings, aboutUsSettings, contactSettings, termsOfServiceSettings, privacyPolicySettings, siteSettings, contactSubmissions, insertAddressSchema, insertOrderSchema, insertSubscriptionSchema, insertMilkSubscriptionSchema, insertSupportTicketSchema, insertTicketMessageSchema, insertProductSchema, insertBannerSchema, insertHomepageSectionSchema, insertContactSubmissionSchema, insertSiteSettingsSchema;
+var sessions, users2, categories, products, vendors, deliveryPartners, deliveryAssignments, drivers, admins, delegationLogs, orders, orderItems, milkSubscriptions, subscriptionDeliveries, cart, cartItems, addresses, supportTickets, ticketMessages, adminCustomerNotes, customerActivityLogs, productVendors, notifications, bills, subscriptionsRelations, subscriptionDeliveriesRelations, ordersRelations, orderItemsRelations, vendorsRelations, deliveryPartnersRelations, driversRelations, adminsRelations, cartRelations, cartItemsRelations, addressesRelations, productVendorsRelations, billsRelations, banners, homepageSections, ethosCards, productDeals, statsCounters, faqs2, newsletterSettings, footerSettings, aboutUsSettings, contactSettings, termsOfServiceSettings, privacyPolicySettings, siteSettings, contactSubmissions, insertAddressSchema, insertOrderSchema, insertSubscriptionSchema, insertMilkSubscriptionSchema, insertSupportTicketSchema, insertTicketMessageSchema, insertAdminCustomerNoteSchema, insertCustomerActivityLogSchema, insertProductSchema, insertBannerSchema, insertHomepageSectionSchema, insertContactSubmissionSchema, insertSiteSettingsSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -372,6 +376,26 @@ var init_schema = __esm({
       ticketId: integer("ticket_id").references(() => supportTickets.id),
       userId: varchar("user_id").references(() => users2.id),
       message: text("message").notNull(),
+      createdAt: timestamp("created_at").defaultNow()
+    });
+    adminCustomerNotes = pgTable("admin_customer_notes", {
+      id: serial("id").primaryKey(),
+      customerId: varchar("customer_id").references(() => users2.id).notNull(),
+      noteText: text("note_text").notNull(),
+      addedByAdminId: varchar("added_by_admin_id").references(() => users2.id),
+      addedByAdminName: varchar("added_by_admin_name"),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    customerActivityLogs = pgTable("customer_activity_logs", {
+      id: serial("id").primaryKey(),
+      customerId: varchar("customer_id").references(() => users2.id).notNull(),
+      type: varchar("type").notNull(),
+      title: varchar("title").notNull(),
+      description: text("description"),
+      metadata: jsonb("metadata"),
+      actorId: varchar("actor_id").references(() => users2.id),
+      actorName: varchar("actor_name"),
       createdAt: timestamp("created_at").defaultNow()
     });
     productVendors = pgTable("product_vendors", {
@@ -698,6 +722,12 @@ var init_schema = __esm({
       faviconUrl: varchar("favicon_url"),
       primaryColor: varchar("primary_color").default("#16A34A"),
       secondaryColor: varchar("secondary_color").default("#FFF9F2"),
+      upiId: varchar("upi_id"),
+      bankName: varchar("bank_name"),
+      accountNumber: varchar("account_number"),
+      ifscCode: varchar("ifsc_code"),
+      qrCodeUrl: text("qr_code_url"),
+      isOnlinePaymentEnabled: boolean("is_online_payment_enabled").default(false),
       updatedAt: timestamp("updated_at").defaultNow()
     });
     contactSubmissions = pgTable("contact_submissions", {
@@ -717,6 +747,8 @@ var init_schema = __esm({
     insertMilkSubscriptionSchema = createInsertSchema(milkSubscriptions);
     insertSupportTicketSchema = createInsertSchema(supportTickets);
     insertTicketMessageSchema = createInsertSchema(ticketMessages);
+    insertAdminCustomerNoteSchema = createInsertSchema(adminCustomerNotes);
+    insertCustomerActivityLogSchema = createInsertSchema(customerActivityLogs);
     insertProductSchema = createInsertSchema(products);
     insertBannerSchema = createInsertSchema(banners);
     insertHomepageSectionSchema = createInsertSchema(homepageSections);
@@ -1118,6 +1150,144 @@ var init_generateInvoice = __esm({
     "use strict";
     init_db();
     init_schema();
+  }
+});
+
+// server/utils/generateInvoicePDF.ts
+var generateInvoicePDF_exports = {};
+__export(generateInvoicePDF_exports, {
+  generateInvoicePDF: () => generateInvoicePDF
+});
+import PDFDocument from "pdfkit";
+function generateInvoicePDF(data, res) {
+  const doc = new PDFDocument({
+    size: "A4",
+    margins: { top: 50, bottom: 50, left: 50, right: 50 }
+  });
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="invoice_${data.customerName.replace(/\s+/g, "_")}_${data.month}_${data.year}.pdf"`);
+  doc.pipe(res);
+  doc.fillColor("#16a34a").font("Helvetica-Bold").fontSize(24).text("DIVINE NATURALS", 50, 50);
+  doc.fillColor("#6b7280").font("Helvetica-Oblique").fontSize(9).text("Pure. Fresh. Daily.", 50, 78);
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(12).text(`INVOICE`, 400, 50, { align: "right", width: 162 });
+  doc.fillColor("#4b5563").font("Helvetica").fontSize(9);
+  doc.text(`Invoice ID: #${data.billId}`, 400, 68, { align: "right", width: 162 });
+  doc.text(`Billing Month: ${data.month} ${data.year}`, 400, 82, { align: "right", width: 162 });
+  doc.text(`Generated: ${new Date(data.generatedDate).toLocaleDateString("en-IN")}`, 400, 96, { align: "right", width: 162 });
+  doc.moveTo(50, 115).lineTo(562, 115).strokeColor("#e5e7eb").lineWidth(1).stroke();
+  let y = 130;
+  doc.fillColor("#9ca3af").font("Helvetica-Bold").fontSize(8).text("BILL TO:", 50, y);
+  doc.fillColor("#9ca3af").font("Helvetica-Bold").fontSize(8).text("STATUS & DUE DATE:", 320, y);
+  y += 12;
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(11).text(data.customerName, 50, y);
+  const statusUpper = data.status.toUpperCase();
+  const statusColor = statusUpper === "PAID" ? "#16a34a" : statusUpper === "OVERDUE" ? "#ef4444" : "#ca8a04";
+  doc.fillColor(statusColor).font("Helvetica-Bold").fontSize(11).text(statusUpper, 320, y);
+  y += 16;
+  doc.fillColor("#4b5563").font("Helvetica").fontSize(9.5).text(data.address, 50, y, { width: 240 });
+  doc.fillColor("#4b5563").font("Helvetica").fontSize(9.5).text(`Due Date: ${new Date(data.dueDate).toLocaleDateString("en-IN")}`, 320, y);
+  y = 210;
+  const cardWidth = 150;
+  const cardHeight = 45;
+  const cardGap = 16;
+  doc.roundedRect(50, y, cardWidth, cardHeight, 6).fillOpacity(0.04).fill("#16a34a");
+  doc.fillOpacity(1);
+  doc.fillColor("#16a34a").font("Helvetica-Bold").fontSize(7.5).text("SUBSCRIPTIONS", 62, y + 10);
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(13).text(`Rs. ${data.subscriptionTotal.toLocaleString()}`, 62, y + 22);
+  doc.roundedRect(50 + cardWidth + cardGap, y, cardWidth, cardHeight, 6).fillOpacity(0.04).fill("#3b82f6");
+  doc.fillOpacity(1);
+  doc.fillColor("#3b82f6").font("Helvetica-Bold").fontSize(7.5).text("ONE-TIME ORDERS", 50 + cardWidth + cardGap + 12, y + 10);
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(13).text(`Rs. ${data.ordersTotal.toLocaleString()}`, 50 + cardWidth + cardGap + 12, y + 22);
+  doc.roundedRect(50 + (cardWidth + cardGap) * 2, y, cardWidth, cardHeight, 6).fillOpacity(0.04).fill("#10b981");
+  doc.fillOpacity(1);
+  doc.fillColor("#10b981").font("Helvetica-Bold").fontSize(7.5).text("TOTAL AMOUNT", 50 + (cardWidth + cardGap) * 2 + 12, y + 10);
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(13).text(`Rs. ${data.finalAmount.toLocaleString()}`, 50 + (cardWidth + cardGap) * 2 + 12, y + 22);
+  y = 280;
+  doc.rect(50, y, 512, 22).fill("#f3f4f6");
+  doc.fillColor("#374151").font("Helvetica-Bold").fontSize(8.5);
+  doc.text("Date", 60, y + 7);
+  doc.text("Description", 130, y + 7);
+  doc.text("Qty", 340, y + 7, { width: 40, align: "center" });
+  doc.text("Rate", 390, y + 7, { width: 70, align: "right" });
+  doc.text("Total", 470, y + 7, { width: 85, align: "right" });
+  y += 22;
+  doc.font("Helvetica").fontSize(8.5).fillColor("#4b5563");
+  if (data.items && data.items.length > 0) {
+    data.items.forEach((item, idx) => {
+      const descHeight = doc.heightOfString(item.description || item.name || "", { width: 200 });
+      const rowHeight = Math.max(descHeight + 10, 22);
+      if (y + rowHeight > 740) {
+        doc.addPage();
+        y = 50;
+        doc.rect(50, y, 512, 22).fill("#f3f4f6");
+        doc.fillColor("#374151").font("Helvetica-Bold").fontSize(8.5);
+        doc.text("Date", 60, y + 7);
+        doc.text("Description", 130, y + 7);
+        doc.text("Qty", 340, y + 7, { width: 40, align: "center" });
+        doc.text("Rate", 390, y + 7, { width: 70, align: "right" });
+        doc.text("Total", 470, y + 7, { width: 85, align: "right" });
+        y += 22;
+        doc.font("Helvetica").fontSize(8.5).fillColor("#4b5563");
+      }
+      if (idx % 2 === 1) {
+        doc.rect(50, y, 512, rowHeight).fill("#f9fafb");
+        doc.fillColor("#4b5563");
+      }
+      doc.text(item.date || "-", 60, y + 6);
+      doc.text(item.description || item.name || "-", 130, y + 6, { width: 200 });
+      doc.text((item.quantity || item.qty || 1).toString(), 340, y + 6, { width: 40, align: "center" });
+      const rate = Number(item.rate || item.price || 0);
+      const total = Number(item.total || 0);
+      doc.text(`Rs. ${rate.toFixed(2)}`, 390, y + 6, { width: 70, align: "right" });
+      doc.text(`Rs. ${total.toFixed(2)}`, 470, y + 6, { width: 85, align: "right" });
+      doc.moveTo(50, y + rowHeight).lineTo(562, y + rowHeight).strokeColor("#f3f4f6").lineWidth(0.5).stroke();
+      y += rowHeight;
+    });
+  } else {
+    doc.text("No billing transactions recorded for this period.", 60, y + 10, { align: "center", width: 492 });
+    y += 30;
+  }
+  if (y + 130 > 740) {
+    doc.addPage();
+    y = 50;
+  }
+  y += 15;
+  const totalBoxX = 330;
+  const totalBoxW = 232;
+  doc.rect(totalBoxX, y, totalBoxW, 115).strokeColor("#e5e7eb").lineWidth(1).stroke();
+  let subY = y + 8;
+  const drawTotalRow = (label, value, isGrand = false, isDiscount = false) => {
+    doc.font(isGrand ? "Helvetica-Bold" : "Helvetica").fontSize(isGrand ? 10 : 8.5).fillColor(isGrand ? "#111827" : "#4b5563");
+    doc.text(label, totalBoxX + 12, subY);
+    const prefix = isDiscount ? "-Rs. " : "Rs. ";
+    doc.text(`${prefix}${value.toLocaleString()}`, totalBoxX + 110, subY, { width: 110, align: "right" });
+    if (!isGrand) {
+      doc.moveTo(totalBoxX + 12, subY + 14).lineTo(totalBoxX + totalBoxW - 12, subY + 14).strokeColor("#f3f4f6").lineWidth(0.5).stroke();
+      subY += 18;
+    }
+  };
+  drawTotalRow("Subscriptions:", data.subscriptionTotal);
+  drawTotalRow("One-Time Orders:", data.ordersTotal);
+  if (data.previousPending > 0) {
+    drawTotalRow("Previous Due:", data.previousPending);
+  }
+  if (data.penalty > 0) {
+    drawTotalRow("Penalty:", data.penalty);
+  }
+  if (data.discount > 0) {
+    drawTotalRow("Discount:", data.discount, false, true);
+  }
+  subY = y + 92;
+  doc.moveTo(totalBoxX + 12, subY - 4).lineTo(totalBoxX + totalBoxW - 12, subY - 4).strokeColor("#e5e7eb").lineWidth(1).stroke();
+  drawTotalRow("Grand Total:", data.finalAmount, true);
+  doc.fillColor("#9ca3af").font("Helvetica").fontSize(7.5);
+  doc.text("This is an automatically generated electronic invoice. No signature is required.", 50, 735, { align: "center", width: 512 });
+  doc.text("Thank you for choosing Divine Naturals! For support, contact support@divinenaturals.com", 50, 746, { align: "center", width: 512 });
+  doc.end();
+}
+var init_generateInvoicePDF = __esm({
+  "server/utils/generateInvoicePDF.ts"() {
+    "use strict";
   }
 });
 
@@ -2008,10 +2178,11 @@ init_db();
 init_schema();
 import { eq as eq2, and as and2 } from "drizzle-orm";
 var CartRepository = class {
+  async getUserCarts(userId) {
+    return db.select().from(cart).where(eq2(cart.userId, userId));
+  }
   async getOrCreateCart(userId) {
-    const existing = await db.query.cart.findFirst({
-      where: eq2(cart.userId, userId)
-    });
+    const [existing] = await this.getUserCarts(userId);
     if (existing) {
       return existing;
     }
@@ -2019,16 +2190,23 @@ var CartRepository = class {
     return newCart;
   }
   async getCartWithItems(userId) {
-    const userCart = await this.getOrCreateCart(userId);
-    const items = await db.query.cartItems.findMany({
-      where: eq2(cartItems.cartId, userCart.id),
-      with: {
-        product: true
-      }
-    });
+    let userCarts = await this.getUserCarts(userId);
+    if (userCarts.length === 0) {
+      userCarts = [await this.getOrCreateCart(userId)];
+    }
+    const cartItemsByCart = await Promise.all(
+      userCarts.map(
+        (userCart) => db.query.cartItems.findMany({
+          where: eq2(cartItems.cartId, userCart.id),
+          with: {
+            product: true
+          }
+        })
+      )
+    );
     return {
-      cart: userCart,
-      items
+      cart: userCarts[0],
+      items: cartItemsByCart.flat()
     };
   }
   async addOrUpdateItem(userId, productId, quantity) {
@@ -2046,7 +2224,7 @@ var CartRepository = class {
       )
     });
     if (existingItem) {
-      const [updated] = await db.update(cartItems).set({ quantity: existingItem.quantity + quantity }).where(eq2(cartItems.id, existingItem.id)).returning();
+      const [updated] = await db.update(cartItems).set({ quantity: Number(existingItem.quantity || 0) + quantity }).where(eq2(cartItems.id, existingItem.id)).returning();
       return updated;
     }
     const [newItem] = await db.insert(cartItems).values({
@@ -2058,30 +2236,39 @@ var CartRepository = class {
     return newItem;
   }
   async updateItemQuantity(userId, cartItemId, quantity) {
-    const userCart = await this.getOrCreateCart(userId);
+    const userCarts = await this.getUserCarts(userId);
     if (quantity <= 0) {
       await this.removeItem(userId, cartItemId);
       return null;
     }
-    const [updated] = await db.update(cartItems).set({ quantity }).where(
-      and2(eq2(cartItems.id, cartItemId), eq2(cartItems.cartId, userCart.id))
-    ).returning();
-    return updated;
+    for (const userCart of userCarts) {
+      const [updated] = await db.update(cartItems).set({ quantity }).where(
+        and2(eq2(cartItems.id, cartItemId), eq2(cartItems.cartId, userCart.id))
+      ).returning();
+      if (updated) return updated;
+    }
+    return null;
   }
   async removeItem(userId, cartItemId) {
-    const userCart = await this.getOrCreateCart(userId);
-    await db.delete(cartItems).where(
-      and2(eq2(cartItems.id, cartItemId), eq2(cartItems.cartId, userCart.id))
+    const userCarts = await this.getUserCarts(userId);
+    await Promise.all(
+      userCarts.map(
+        (userCart) => db.delete(cartItems).where(
+          and2(eq2(cartItems.id, cartItemId), eq2(cartItems.cartId, userCart.id))
+        )
+      )
     );
   }
   async clearCart(userId) {
-    const userCart = await this.getOrCreateCart(userId);
-    await db.delete(cartItems).where(eq2(cartItems.cartId, userCart.id));
+    const userCarts = await this.getUserCarts(userId);
+    await Promise.all(
+      userCarts.map((userCart) => db.delete(cartItems).where(eq2(cartItems.cartId, userCart.id)))
+    );
   }
   async getCartSummary(userId) {
     const { items } = await this.getCartWithItems(userId);
     const subtotal = items.reduce((sum, item) => {
-      const itemTotal = parseFloat(item.price) * item.quantity;
+      const itemTotal = Number(item.price || 0) * Number(item.quantity || 0);
       return sum + itemTotal;
     }, 0);
     const deliveryFee = subtotal >= 500 ? 0 : 40;
@@ -2091,7 +2278,7 @@ var CartRepository = class {
       deliveryFee,
       discount: 0,
       total,
-      itemCount: items.reduce((sum, item) => sum + item.quantity, 0)
+      itemCount: items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
     };
   }
 };
@@ -2107,6 +2294,7 @@ router.get("/", async (req, res) => {
       return res.status(401).json({ message: "Unauthorized - Please log in" });
     }
     const result = await cartRepository.getCartWithItems(userId);
+    res.set("Cache-Control", "no-store");
     res.json(result.items || []);
   } catch (error) {
     console.error("Error fetching cart:", error);
@@ -2120,6 +2308,7 @@ router.get("/summary", async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
     const summary = await cartRepository.getCartSummary(userId);
+    res.set("Cache-Control", "no-store");
     res.json(summary);
   } catch (error) {
     console.error("Error fetching cart summary:", error);
@@ -2138,6 +2327,7 @@ router.post("/items", async (req, res) => {
     }
     const { productId, quantity } = addItemSchema.parse(req.body);
     const item = await cartRepository.addOrUpdateItem(userId, productId, quantity);
+    res.set("Cache-Control", "no-store");
     res.json(item);
   } catch (error) {
     console.error("Error adding item to cart:", error);
@@ -2156,6 +2346,7 @@ router.patch("/items/:id", async (req, res) => {
     const itemId = parseInt(req.params.id);
     const { quantity } = updateItemSchema.parse(req.body);
     const item = await cartRepository.updateItemQuantity(userId, itemId, quantity);
+    res.set("Cache-Control", "no-store");
     res.json(item);
   } catch (error) {
     console.error("Error updating cart item:", error);
@@ -2170,6 +2361,7 @@ router.delete("/items/:id", async (req, res) => {
     }
     const itemId = parseInt(req.params.id);
     await cartRepository.removeItem(userId, itemId);
+    res.set("Cache-Control", "no-store");
     res.json({ success: true });
   } catch (error) {
     console.error("Error removing cart item:", error);
@@ -2183,7 +2375,8 @@ router.delete("/", async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
     await cartRepository.clearCart(userId);
-    res.json({ success: true });
+    res.set("Cache-Control", "no-store");
+    res.json({ success: true, items: [], summary: { subtotal: 0, deliveryFee: 0, discount: 0, total: 0, itemCount: 0 } });
   } catch (error) {
     console.error("Error clearing cart:", error);
     res.status(500).json({ message: "Failed to clear cart" });
@@ -2202,7 +2395,7 @@ var AddressRepository = class {
   async getAddressesByUser(userId) {
     return await db.query.addresses.findMany({
       where: eq3(addresses.userId, userId),
-      orderBy: (addresses3, { desc: desc5 }) => [desc5(addresses3.isDefault)]
+      orderBy: (addresses3, { desc: desc7 }) => [desc7(addresses3.isDefault)]
     });
   }
   async getAddressById(addressId) {
@@ -2351,29 +2544,32 @@ var createOrderSchema = z2.object({
 });
 router3.post("/", async (req, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     const payload = createOrderSchema.parse(req.body);
-    const userCart = await db.query.cart.findFirst({
-      where: eq4(cart.userId, userId)
-    });
-    if (!userCart) {
+    const userCarts = await db.select().from(cart).where(eq4(cart.userId, userId));
+    if (userCarts.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
     }
-    const cartItemsList = await db.query.cartItems.findMany({
-      where: eq4(cartItems.cartId, userCart.id)
-    });
+    const cartItemsList = (await Promise.all(
+      userCarts.map(
+        (userCart) => db.query.cartItems.findMany({
+          where: eq4(cartItems.cartId, userCart.id)
+        })
+      )
+    )).flat();
     if (cartItemsList.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
     }
     let totalAmount = 0;
     for (const item of cartItemsList) {
-      totalAmount += parseFloat(item.price) * item.quantity;
+      totalAmount += Number(item.price || 0) * Number(item.quantity || 0);
     }
     const today = /* @__PURE__ */ new Date();
     today.setHours(0, 0, 0, 0);
+    const todayDate = today.toISOString().split("T")[0];
     let paymentMethod = payload.paymentMethod;
     if (paymentMethod === "cash") paymentMethod = "cod";
     const deliveryAddress = payload.userInfo?.address || "Delivery Address";
@@ -2384,27 +2580,28 @@ router3.post("/", async (req, res) => {
       paymentMethod,
       paymentStatus: payload.paymentStatus,
       status: "PLACED",
-      deliveryDate: today,
-      liters: cartItemsList.reduce((sum, item) => sum + item.quantity, 0)
+      deliveryDate: todayDate,
+      liters: cartItemsList.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
     }).returning();
     for (const item of cartItemsList) {
       await db.insert(orderItems).values({
         orderId: newOrder.id,
         productId: item.productId,
-        quantity: item.quantity,
-        price: item.price,
-        totalPrice: (parseFloat(item.price) * item.quantity).toString()
+        quantity: Number(item.quantity || 0),
+        price: item.price || "0",
+        totalPrice: (Number(item.price || 0) * Number(item.quantity || 0)).toString()
       });
-      const product = await db.query.products.findFirst({
+      const product = item.productId ? await db.query.products.findFirst({
         where: eq4(products.id, item.productId)
-      });
+      }) : null;
       if (product) {
-        const newStock = Math.max(0, product.stock - item.quantity);
+        const newStock = Math.max(0, Number(product.stock || 0) - Number(item.quantity || 0));
         await db.update(products).set({ stock: newStock }).where(eq4(products.id, item.productId));
       }
     }
-    await db.delete(cartItems).where(eq4(cartItems.cartId, userCart.id));
-    res.status(201).json(newOrder);
+    await Promise.all(userCarts.map((userCart) => db.delete(cartItems).where(eq4(cartItems.cartId, userCart.id))));
+    res.set("Cache-Control", "no-store");
+    res.status(201).json({ ...newOrder, cartCleared: true, clearedCartIds: userCarts.map((cart2) => cart2.id) });
   } catch (error) {
     console.error("Error creating order:", error);
     if (error.name === "ZodError") {
@@ -2415,7 +2612,7 @@ router3.post("/", async (req, res) => {
 });
 router3.get("/", async (req, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -2425,15 +2622,16 @@ router3.get("/", async (req, res) => {
         const items = await db.select().from(orderItems).where(eq4(orderItems.orderId, order.id));
         const itemsWithProducts = await Promise.all(
           items.map(async (item) => {
-            const product = await db.query.products.findFirst({
+            const product = item.productId ? await db.query.products.findFirst({
               where: eq4(products.id, item.productId)
-            });
+            }) : null;
             return { ...item, product };
           })
         );
         return { ...order, items: itemsWithProducts };
       })
     );
+    res.set("Cache-Control", "no-store");
     res.json(ordersWithItems);
   } catch (error) {
     console.error("Error fetching orders:", error);
@@ -2442,7 +2640,7 @@ router3.get("/", async (req, res) => {
 });
 router3.get("/:id", async (req, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = req.session?.userId || req.user?.claims?.sub;
     const orderId = parseInt(req.params.id);
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -2454,12 +2652,13 @@ router3.get("/:id", async (req, res) => {
     const items = await db.select().from(orderItems).where(eq4(orderItems.orderId, orderId));
     const itemsWithProducts = await Promise.all(
       items.map(async (item) => {
-        const product = await db.query.products.findFirst({
+        const product = item.productId ? await db.query.products.findFirst({
           where: eq4(products.id, item.productId)
-        });
+        }) : null;
         return { ...item, product };
       })
     );
+    res.set("Cache-Control", "no-store");
     res.json({ ...order, items: itemsWithProducts });
   } catch (error) {
     console.error("Error fetching order:", error);
@@ -2613,7 +2812,7 @@ var OffersRepository = class {
         sql`${offers.validFrom} <= ${today}`,
         sql`${offers.validTo} >= ${today}`
       ),
-      orderBy: (offers2, { desc: desc5 }) => [desc5(offers2.createdAt)]
+      orderBy: (offers2, { desc: desc7 }) => [desc7(offers2.createdAt)]
     });
   }
   async getOfferById(offerId) {
@@ -2727,6 +2926,17 @@ import { Router as Router6 } from "express";
 import { eq as eq7, and as and6 } from "drizzle-orm";
 var router6 = Router6();
 router6.use(isAuthenticated);
+var toAmount = (value) => {
+  const amount = Number.parseFloat(`${value ?? 0}`);
+  return Number.isFinite(amount) ? amount : 0;
+};
+var getMonthlyDeliveryCount = (frequency) => {
+  const normalized = `${frequency || "daily"}`.toLowerCase().trim();
+  if (normalized.includes("week")) return 4;
+  if (normalized.includes("alternate") || normalized.includes("every other")) return 15;
+  if (normalized.includes("month")) return 1;
+  return 30;
+};
 router6.post("/", async (req, res) => {
   try {
     const userId = req.session?.userId || req.user?.claims?.sub;
@@ -2768,7 +2978,15 @@ router6.get("/me", async (req, res) => {
         const product = await db.query.products.findFirst({
           where: eq7(products.id, sub.productId)
         });
-        return { ...sub, product };
+        const perDeliveryAmount = toAmount(sub.pricePerL || product?.price) * toAmount(sub.quantity || 1);
+        const monthlyDeliveryCount = getMonthlyDeliveryCount(sub.frequency);
+        return {
+          ...sub,
+          product,
+          perDeliveryAmount,
+          monthlyDeliveryCount,
+          monthlyAmount: perDeliveryAmount * monthlyDeliveryCount
+        };
       })
     );
     res.json(subscriptionsWithProducts || []);
@@ -3039,33 +3257,482 @@ var admin_subscriptions_routes_default = router7;
 init_db();
 init_schema();
 import { Router as Router8 } from "express";
-import { eq as eq9 } from "drizzle-orm";
+import { and as and7, desc as desc3, eq as eq9, inArray, ne, sql as sql2 } from "drizzle-orm";
 var router8 = Router8();
-router8.get("/", async (req, res) => {
+var crmTablesReady = false;
+var ensureCrmTables = async () => {
+  if (crmTablesReady) return;
+  await db.execute(sql2`
+    CREATE TABLE IF NOT EXISTS admin_customer_notes (
+      id SERIAL PRIMARY KEY,
+      customer_id VARCHAR NOT NULL REFERENCES users(id),
+      note_text TEXT NOT NULL,
+      added_by_admin_id VARCHAR REFERENCES users(id),
+      added_by_admin_name VARCHAR,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql2`
+    CREATE TABLE IF NOT EXISTS customer_activity_logs (
+      id SERIAL PRIMARY KEY,
+      customer_id VARCHAR NOT NULL REFERENCES users(id),
+      type VARCHAR NOT NULL,
+      title VARCHAR NOT NULL,
+      description TEXT,
+      metadata JSONB,
+      actor_id VARCHAR REFERENCES users(id),
+      actor_name VARCHAR,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql2`CREATE INDEX IF NOT EXISTS idx_admin_customer_notes_customer_id ON admin_customer_notes(customer_id)`);
+  await db.execute(sql2`CREATE INDEX IF NOT EXISTS idx_customer_activity_logs_customer_id ON customer_activity_logs(customer_id)`);
+  crmTablesReady = true;
+};
+var numberValue = (value) => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+var moneyString = (value) => value.toFixed(2);
+var toDateKey = (value) => {
+  if (!value) return null;
+  if (typeof value === "string") return value.split("T")[0];
+  if (value instanceof Date) return value.toISOString().split("T")[0];
+  return null;
+};
+var makeName = (user) => `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.email || user?.phone || "Unknown Customer";
+var makeOrderCode = (id) => `ORD${String(id).padStart(4, "0")}`;
+var makeInvoiceCode = (id) => `INV${String(id).padStart(4, "0")}`;
+var makeSubscriptionCode = (id) => `SUB${String(id).padStart(4, "0")}`;
+var getAdminActor = (req) => ({
+  actorId: req.user?.id || req.user?.claims?.sub || null,
+  actorName: req.user?.claims?.email || (req.session?.isAdminLoggedIn ? "Admin" : "Admin")
+});
+var addActivityLog = async (customerId, type, title, description, req, metadata = {}) => {
+  await ensureCrmTables();
+  const actor = getAdminActor(req);
+  await db.insert(customerActivityLogs).values({
+    customerId,
+    type,
+    title,
+    description,
+    metadata,
+    actorId: actor.actorId || void 0,
+    actorName: actor.actorName
+  });
+};
+var getCustomer = async (customerId) => {
+  return db.query.users.findFirst({
+    where: eq9(users2.id, customerId)
+  });
+};
+var getCustomerAddresses = async (customerId) => {
+  return db.select().from(addresses).where(eq9(addresses.userId, customerId));
+};
+var getDefaultAddress = (customerAddresses) => customerAddresses.find((address) => address.isDefault) || customerAddresses[0] || null;
+var getDetailedOrders = async (customerId) => {
+  const customerOrders = await db.select().from(orders).where(eq9(orders.userId, customerId)).orderBy(desc3(orders.createdAt));
+  const orderIds = customerOrders.map((order) => order.id);
+  const itemRows = orderIds.length ? await db.select({ item: orderItems, product: products }).from(orderItems).leftJoin(products, eq9(orderItems.productId, products.id)).where(inArray(orderItems.orderId, orderIds)) : [];
+  const itemsByOrder = /* @__PURE__ */ new Map();
+  for (const row of itemRows) {
+    const id = row.item.orderId;
+    if (!id) continue;
+    const current = itemsByOrder.get(id) || [];
+    current.push({
+      ...row.item,
+      product: row.product,
+      productName: row.product?.name || `Product #${row.item.productId}`,
+      unit: row.product?.unit || ""
+    });
+    itemsByOrder.set(id, current);
+  }
+  return customerOrders.map((order) => {
+    const items = itemsByOrder.get(order.id) || [];
+    const totalQuantity = items.reduce((sum, item) => sum + numberValue(item.quantity), 0);
+    const productsOrdered = items.length ? items.map((item) => `${item.productName} x ${item.quantity}`).join(", ") : order.liters ? `${order.liters}L milk order` : "Order items unavailable";
+    return {
+      ...order,
+      orderCode: makeOrderCode(order.id),
+      products: items,
+      productsOrdered,
+      quantity: totalQuantity || numberValue(order.liters),
+      orderAmount: moneyString(numberValue(order.totalAmount)),
+      deliveryStatus: order.status,
+      deliveryDate: order.deliveryDate,
+      invoiceUrl: null
+    };
+  });
+};
+var getDetailedSubscriptions = async (customerId) => {
+  const customerSubscriptions = await db.select({ subscription: milkSubscriptions, product: products }).from(milkSubscriptions).leftJoin(products, eq9(milkSubscriptions.productId, products.id)).where(eq9(milkSubscriptions.userId, customerId)).orderBy(desc3(milkSubscriptions.createdAt));
+  const subscriptionIds = customerSubscriptions.map((row) => row.subscription.id);
+  const deliveryRows = subscriptionIds.length ? await db.select().from(subscriptionDeliveries).where(inArray(subscriptionDeliveries.subscriptionId, subscriptionIds)) : [];
+  return customerSubscriptions.map(({ subscription, product }) => {
+    const relatedDeliveries = deliveryRows.filter((delivery) => delivery.subscriptionId === subscription.id);
+    const deliveredRows = relatedDeliveries.filter((delivery) => `${delivery.status}`.toLowerCase() === "delivered");
+    const pendingRows = relatedDeliveries.filter((delivery) => `${delivery.status}`.toLowerCase() === "pending");
+    const quantity = numberValue(subscription.quantity);
+    const price = numberValue(subscription.pricePerL || product?.price);
+    const createdAt = subscription.createdAt ? new Date(subscription.createdAt) : null;
+    const createdHour = createdAt ? createdAt.getHours() : null;
+    const isBeforeCutoff = createdHour === null ? null : createdHour < 21;
+    return {
+      ...subscription,
+      subscriptionCode: makeSubscriptionCode(subscription.id),
+      product,
+      productName: product?.name || `Product #${subscription.productId}`,
+      dailyQuantity: quantity,
+      subscriptionType: subscription.frequency,
+      deliveryStartDate: subscription.startDate,
+      createdDateTime: subscription.createdAt,
+      cutoffStatus: isBeforeCutoff === null ? "unknown" : isBeforeCutoff ? "before_9_pm" : "after_9_pm",
+      cutoffMessage: isBeforeCutoff === null ? "Cut-off information is unavailable for this subscription." : isBeforeCutoff ? "This subscription was created before 9 PM, so delivery starts from the next day." : "This subscription was created after 9 PM, so delivery starts from the day after tomorrow.",
+      totalDeliveredQuantity: deliveredRows.reduce((sum, delivery) => sum + numberValue(delivery.quantity), 0),
+      totalPendingQuantity: pendingRows.reduce((sum, delivery) => sum + numberValue(delivery.quantity || quantity), 0),
+      monthlyAmount: moneyString(quantity * price * 30),
+      deliveriesCount: relatedDeliveries.length
+    };
+  });
+};
+var isSubscriptionDueOn = (subscription, dateKey) => {
+  if (`${subscription.status}`.toUpperCase() !== "ACTIVE") return false;
+  const startKey = toDateKey(subscription.startDate);
+  const endKey = toDateKey(subscription.endDate);
+  if (startKey && startKey > dateKey) return false;
+  if (endKey && endKey < dateKey) return false;
+  const frequency = `${subscription.frequency || "daily"}`.toLowerCase();
+  if (frequency === "daily") return true;
+  if (!startKey) return false;
+  const targetDate = /* @__PURE__ */ new Date(`${dateKey}T00:00:00`);
+  const startDate = /* @__PURE__ */ new Date(`${startKey}T00:00:00`);
+  if (frequency === "weekly") {
+    return targetDate.getDay() === startDate.getDay();
+  }
+  if (frequency === "alternate") {
+    const days = Math.floor((targetDate.getTime() - startDate.getTime()) / 864e5);
+    return days >= 0 && days % 2 === 0;
+  }
+  return true;
+};
+var getDetailedDeliveries = async (customerId) => {
+  const deliveries = await db.select({
+    delivery: subscriptionDeliveries,
+    subscription: milkSubscriptions,
+    product: products
+  }).from(subscriptionDeliveries).leftJoin(milkSubscriptions, eq9(subscriptionDeliveries.subscriptionId, milkSubscriptions.id)).leftJoin(products, eq9(milkSubscriptions.productId, products.id)).where(eq9(subscriptionDeliveries.userId, customerId)).orderBy(desc3(subscriptionDeliveries.deliveryDate));
+  const assignmentRows = await db.select({
+    assignment: deliveryAssignments,
+    partner: deliveryPartners
+  }).from(deliveryAssignments).leftJoin(deliveryPartners, eq9(deliveryAssignments.partnerId, deliveryPartners.id)).where(eq9(deliveryAssignments.status, "delivered"));
+  return deliveries.map(({ delivery, subscription, product }) => {
+    const relatedAssignment = assignmentRows.find(
+      (row) => row.assignment.subscriptionId === delivery.subscriptionId && toDateKey(row.assignment.assignmentDate) === toDateKey(delivery.deliveryDate)
+    );
+    const required = numberValue(subscription?.quantity || delivery.quantity);
+    const status = `${delivery.status || "pending"}`.toLowerCase();
+    const delivered = status === "delivered" ? numberValue(delivery.quantity || required) : 0;
+    return {
+      ...delivery,
+      subscriptionCode: delivery.subscriptionId ? makeSubscriptionCode(delivery.subscriptionId) : "N/A",
+      productName: product?.name || `Product #${subscription?.productId || ""}`.trim() || "Subscription product",
+      quantityRequired: required,
+      quantityDelivered: delivered,
+      deliveryStatus: delivery.status || "pending",
+      confirmedByUser: status === "delivered" ? true : null,
+      confirmedTime: status === "delivered" ? delivery.createdAt : null,
+      deliveryPartner: relatedAssignment?.partner?.fullName || relatedAssignment?.partner?.phone || null,
+      adminRemarks: relatedAssignment?.assignment?.failedReason || null
+    };
+  });
+};
+var getTodayDelivery = async (customerId, subscriptionsData, deliveriesData) => {
+  const todayKey = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  const subscriptions = subscriptionsData || await getDetailedSubscriptions(customerId);
+  const deliveries = deliveriesData || await getDetailedDeliveries(customerId);
+  const dueSubscriptions = subscriptions.filter((subscription) => isSubscriptionDueOn(subscription, todayKey));
+  const todayDeliveries = deliveries.filter((delivery) => toDateKey(delivery.deliveryDate) === todayKey);
+  const scheduledRequired = dueSubscriptions.reduce((sum, subscription) => sum + numberValue(subscription.quantity), 0);
+  const recordedRequired = todayDeliveries.reduce((sum, delivery) => sum + numberValue(delivery.quantityRequired), 0);
+  const required = Math.max(scheduledRequired, recordedRequired);
+  const delivered = todayDeliveries.reduce((sum, delivery) => sum + numberValue(delivery.quantityDelivered), 0);
+  const remaining = Math.max(required - delivered, 0);
+  let status = "Pending";
+  if (required === 0) status = "No Delivery Scheduled";
+  else if (delivered >= required) status = "Delivered";
+  else if (delivered > 0) status = "Partial Delivered";
+  const lastDelivered = todayDeliveries.find((delivery) => numberValue(delivery.quantityDelivered) > 0);
+  return {
+    date: todayKey,
+    required,
+    delivered,
+    remaining,
+    status,
+    confirmedByUser: lastDelivered?.confirmedByUser || false,
+    confirmedTime: lastDelivered?.confirmedTime || null
+  };
+};
+var getBills = async (customerId) => {
+  return db.select().from(bills).where(eq9(bills.userId, customerId)).orderBy(desc3(bills.year), desc3(bills.month));
+};
+var getPayments = async (customerId) => {
+  const customerBills = await getBills(customerId);
+  return customerBills.map((bill) => {
+    const total = numberValue(bill.finalAmount);
+    const paid = bill.status === "paid" ? total : 0;
+    const pending = Math.max(total - paid, 0);
+    return {
+      invoiceId: makeInvoiceCode(bill.id),
+      billId: bill.id,
+      billingMonth: `${bill.month}/${bill.year}`,
+      billingPeriod: `${bill.month}/${bill.year}`,
+      totalMilkQuantity: Array.isArray(bill.items) ? bill.items.reduce((sum, item) => sum + numberValue(item.quantity), 0) : 0,
+      subscriptionAmount: moneyString(numberValue(bill.subscriptionTotal)),
+      orderAmount: moneyString(numberValue(bill.ordersTotal)),
+      discount: moneyString(numberValue(bill.discount)),
+      paidAmount: moneyString(paid),
+      pendingAmount: moneyString(pending),
+      paymentMethod: bill.paymentMethod || "N/A",
+      paymentStatus: bill.status,
+      paymentDate: bill.paymentDate,
+      invoiceDownloadUrl: `/api/bills/${bill.id}/pdf`,
+      dueDate: bill.dueDate,
+      finalAmount: moneyString(total),
+      previousPending: moneyString(numberValue(bill.previousPending))
+    };
+  });
+};
+var getComplaints = async (customerId) => {
+  const tickets = await db.select().from(supportTickets).where(eq9(supportTickets.userId, customerId)).orderBy(desc3(supportTickets.createdAt));
+  if (!tickets.length) return [];
+  const ticketIds = tickets.map((ticket) => ticket.id);
+  const messages = await db.select().from(ticketMessages).where(inArray(ticketMessages.ticketId, ticketIds));
+  return tickets.map((ticket) => {
+    const ticketThread = messages.filter((message) => message.ticketId === ticket.id).sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+    const adminReply = [...ticketThread].reverse().find((message) => message.userId !== customerId);
+    const isResolved = ["resolved", "closed"].includes(`${ticket.status}`.toLowerCase());
+    return {
+      complaintId: ticket.id,
+      date: ticket.createdAt,
+      subject: ticket.subject,
+      message: ticket.description,
+      status: ticket.status,
+      adminReply: adminReply?.message || null,
+      resolvedDate: isResolved ? ticket.updatedAt : null,
+      priority: ticket.priority,
+      category: ticket.category
+    };
+  });
+};
+var getNotes = async (customerId) => {
+  await ensureCrmTables();
+  return db.select().from(adminCustomerNotes).where(eq9(adminCustomerNotes.customerId, customerId)).orderBy(desc3(adminCustomerNotes.createdAt));
+};
+var getStoredActivity = async (customerId) => {
+  await ensureCrmTables();
+  return db.select().from(customerActivityLogs).where(eq9(customerActivityLogs.customerId, customerId)).orderBy(desc3(customerActivityLogs.createdAt));
+};
+var getActivity = async (customerId) => {
+  const [customer, detailedOrders, detailedSubscriptions, deliveries, payments, complaints, notes, stored] = await Promise.all([
+    getCustomer(customerId),
+    getDetailedOrders(customerId),
+    getDetailedSubscriptions(customerId),
+    getDetailedDeliveries(customerId),
+    getPayments(customerId),
+    getComplaints(customerId),
+    getNotes(customerId),
+    getStoredActivity(customerId)
+  ]);
+  const events = [];
+  if (customer?.createdAt) {
+    events.push({
+      type: "Account Created",
+      title: "Customer account created",
+      description: `${makeName(customer)} joined Divine Naturals.`,
+      createdAt: customer.createdAt
+    });
+  }
+  detailedOrders.forEach((order) => {
+    events.push({
+      type: "Order Placed",
+      title: `Order ${order.orderCode} placed`,
+      description: `${order.productsOrdered} for \u20B9${order.orderAmount}.`,
+      createdAt: order.createdAt
+    });
+  });
+  detailedSubscriptions.forEach((subscription) => {
+    events.push({
+      type: "Subscription Created",
+      title: `${subscription.productName} subscription created`,
+      description: `${subscription.quantity} ${subscription.product?.unit || "unit"} ${subscription.frequency}.`,
+      createdAt: subscription.createdAt
+    });
+  });
+  deliveries.forEach((delivery) => {
+    if (`${delivery.deliveryStatus}`.toLowerCase() !== "pending") {
+      events.push({
+        type: "Milk Delivered",
+        title: `${delivery.productName} delivery ${delivery.deliveryStatus}`,
+        description: `${delivery.quantityDelivered}/${delivery.quantityRequired} delivered.`,
+        createdAt: delivery.confirmedTime || delivery.createdAt || delivery.deliveryDate
+      });
+    }
+  });
+  payments.forEach((payment) => {
+    if (payment.paymentDate) {
+      events.push({
+        type: "Payment Made",
+        title: `Payment marked ${payment.paymentStatus}`,
+        description: `Invoice ${payment.invoiceId}: \u20B9${payment.paidAmount} paid, \u20B9${payment.pendingAmount} pending.`,
+        createdAt: payment.paymentDate
+      });
+    } else {
+      events.push({
+        type: "Invoice Generated",
+        title: `Invoice ${payment.invoiceId} generated`,
+        description: `Bill amount \u20B9${payment.finalAmount}.`,
+        createdAt: payment.dueDate
+      });
+    }
+  });
+  complaints.forEach((complaint) => {
+    events.push({
+      type: "Complaint Created",
+      title: complaint.subject,
+      description: complaint.message,
+      createdAt: complaint.date
+    });
+  });
+  notes.forEach((note) => {
+    events.push({
+      type: "Admin Note Added",
+      title: "Admin note added",
+      description: note.noteText,
+      createdAt: note.createdAt,
+      actorName: note.addedByAdminName
+    });
+  });
+  stored.forEach((activity) => events.push(activity));
+  return events.filter((event) => event.createdAt).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 100);
+};
+var getCustomerSummary = async (customer, detailedOrders, detailedSubscriptions, deliveries, payments) => {
+  const activeSubscriptions = detailedSubscriptions.filter((sub) => `${sub.status}`.toUpperCase() === "ACTIVE");
+  const totalSpent = detailedOrders.filter((order) => `${order.paymentStatus}`.toLowerCase() === "paid").reduce((sum, order) => sum + numberValue(order.totalAmount), 0);
+  const orderTotal = detailedOrders.reduce((sum, order) => sum + numberValue(order.totalAmount), 0);
+  const pendingDues = payments.reduce((sum, payment) => sum + numberValue(payment.pendingAmount), 0);
+  const totalLitersDelivered = deliveries.reduce((sum, delivery) => sum + numberValue(delivery.quantityDelivered), 0);
+  const todayKey = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  const lastDelivery = deliveries.find((delivery) => {
+    const status = `${delivery.deliveryStatus}`.toLowerCase();
+    const deliveryDate = toDateKey(delivery.deliveryDate);
+    return deliveryDate && deliveryDate <= todayKey && status !== "pending" && status !== "upcoming";
+  }) || deliveries[0];
+  return {
+    totalOrders: detailedOrders.length,
+    totalSubscriptions: detailedSubscriptions.length,
+    activeSubscriptions: activeSubscriptions.length,
+    totalAmountSpent: moneyString(totalSpent || orderTotal),
+    pendingAmount: moneyString(pendingDues),
+    walletBalance: moneyString(numberValue(customer.walletBalance)),
+    totalLitersDelivered,
+    lastDeliveryStatus: lastDelivery ? `${lastDelivery.deliveryStatus} on ${toDateKey(lastDelivery.deliveryDate) || "latest delivery"}` : "No deliveries yet"
+  };
+};
+var getCustomerProfile = async (customerId) => {
+  const customer = await getCustomer(customerId);
+  if (!customer) return null;
+  const [customerAddresses, detailedOrders, detailedSubscriptions, deliveries, payments, complaints, notes] = await Promise.all([
+    getCustomerAddresses(customerId),
+    getDetailedOrders(customerId),
+    getDetailedSubscriptions(customerId),
+    getDetailedDeliveries(customerId),
+    getPayments(customerId),
+    getComplaints(customerId),
+    getNotes(customerId)
+  ]);
+  const summary = await getCustomerSummary(customer, detailedOrders, detailedSubscriptions, deliveries, payments);
+  const todayDelivery = await getTodayDelivery(customerId, detailedSubscriptions, deliveries);
+  const activity = await getActivity(customerId);
+  const defaultAddress = getDefaultAddress(customerAddresses);
+  const previousPending = payments.reduce((sum, payment) => sum + numberValue(payment.previousPending), 0);
+  const currentMonthBill = payments[0] ? numberValue(payments[0].finalAmount) : 0;
+  const outstandingBalance = numberValue(summary.pendingAmount);
+  return {
+    customer: {
+      id: customer.id,
+      customerId: customer.id,
+      name: makeName(customer),
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      email: customer.email,
+      phone: customer.phone,
+      alternatePhone: defaultAddress?.phone && defaultAddress.phone !== customer.phone ? defaultAddress.phone : null,
+      accountCreatedDate: customer.createdAt,
+      lastLoginDate: null,
+      status: customer.isActive ? "Active" : "Blocked",
+      role: customer.role,
+      walletBalance: moneyString(numberValue(customer.walletBalance))
+    },
+    contact: {
+      fullName: makeName(customer),
+      email: customer.email,
+      phone: customer.phone,
+      alternatePhone: defaultAddress?.phone && defaultAddress.phone !== customer.phone ? defaultAddress.phone : null
+    },
+    addresses: customerAddresses,
+    defaultAddress,
+    summary,
+    todayDelivery,
+    orders: detailedOrders,
+    subscriptions: detailedSubscriptions,
+    deliveries,
+    payments,
+    invoices: payments,
+    complaints,
+    notes,
+    dues: {
+      outstandingBalance: moneyString(outstandingBalance),
+      currentMonthBill: moneyString(currentMonthBill),
+      previousPending: moneyString(previousPending),
+      totalPayable: moneyString(outstandingBalance),
+      lastPaymentDate: payments.find((payment) => payment.paymentDate)?.paymentDate || null,
+      nextBillingDate: new Date((/* @__PURE__ */ new Date()).getFullYear(), (/* @__PURE__ */ new Date()).getMonth() + 1, 1).toISOString()
+    },
+    activity
+  };
+};
+router8.use(requireAdminAccess);
+router8.get("/", async (_req, res) => {
   try {
     const allCustomers = await db.query.users.findMany({
-      where: (table, { ne }) => ne(table.role, "admin")
+      where: ne(users2.role, "admin"),
+      orderBy: [desc3(users2.createdAt)]
     });
     const customersWithStats = await Promise.all(
       allCustomers.map(async (customer) => {
-        const customerOrders = await db.select().from(orders).where(eq9(orders.userId, customer.id));
-        const customerSubs = await db.select().from(milkSubscriptions).where(eq9(milkSubscriptions.userId, customer.id));
-        let totalSpending = "0";
-        if (customerOrders.length > 0) {
-          const total = customerOrders.reduce((sum, order) => {
-            return sum + parseFloat(order.totalAmount || "0");
-          }, 0);
-          totalSpending = total.toString();
-        }
+        const [customerOrders, customerSubscriptions, customerBills] = await Promise.all([
+          db.select().from(orders).where(eq9(orders.userId, customer.id)),
+          db.select().from(milkSubscriptions).where(eq9(milkSubscriptions.userId, customer.id)),
+          db.select().from(bills).where(eq9(bills.userId, customer.id))
+        ]);
+        const totalSpending = customerOrders.reduce((sum, order) => sum + numberValue(order.totalAmount), 0);
+        const pendingAmount = customerBills.reduce((sum, bill) => {
+          if (bill.status === "paid") return sum;
+          return sum + numberValue(bill.finalAmount);
+        }, 0);
         return {
           id: customer.id,
-          name: `${customer.firstName || ""} ${customer.lastName || ""}`.trim() || "Unknown",
+          name: makeName(customer),
           phone: customer.phone || "N/A",
           email: customer.email || "N/A",
           orderCount: customerOrders.length,
-          subscriptionCount: customerSubs.length,
-          totalSpending,
-          joinedDate: customer.createdAt
+          subscriptionCount: customerSubscriptions.length,
+          activeSubscriptionCount: customerSubscriptions.filter((sub) => `${sub.status}`.toUpperCase() === "ACTIVE").length,
+          totalSpending: moneyString(totalSpending),
+          pendingAmount: moneyString(pendingAmount),
+          joinedDate: customer.createdAt,
+          status: customer.isActive ? "Active" : "Blocked"
         };
       })
     );
@@ -3075,24 +3742,188 @@ router8.get("/", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch customers" });
   }
 });
-router8.get("/:id/orders", async (req, res) => {
+router8.get("/:customerId", async (req, res) => {
   try {
-    const customerId = req.params.id;
-    const customerOrders = await db.select().from(orders).where(eq9(orders.userId, customerId));
-    res.json(customerOrders);
+    const profile = await getCustomerProfile(req.params.customerId);
+    if (!profile) return res.status(404).json({ message: "Customer not found" });
+    res.json(profile);
+  } catch (error) {
+    console.error("Error fetching customer details:", error);
+    res.status(500).json({ message: "Failed to fetch customer details" });
+  }
+});
+router8.get("/:customerId/orders", async (req, res) => {
+  try {
+    res.json(await getDetailedOrders(req.params.customerId));
   } catch (error) {
     console.error("Error fetching customer orders:", error);
     res.status(500).json({ message: "Failed to fetch customer orders" });
   }
 });
-router8.get("/:id/subscriptions", async (req, res) => {
+router8.get("/:customerId/subscriptions", async (req, res) => {
   try {
-    const customerId = req.params.id;
-    const customerSubs = await db.select().from(milkSubscriptions).where(eq9(milkSubscriptions.userId, customerId));
-    res.json(customerSubs);
+    res.json(await getDetailedSubscriptions(req.params.customerId));
   } catch (error) {
     console.error("Error fetching customer subscriptions:", error);
     res.status(500).json({ message: "Failed to fetch customer subscriptions" });
+  }
+});
+router8.get("/:customerId/deliveries", async (req, res) => {
+  try {
+    res.json(await getDetailedDeliveries(req.params.customerId));
+  } catch (error) {
+    console.error("Error fetching customer deliveries:", error);
+    res.status(500).json({ message: "Failed to fetch customer deliveries" });
+  }
+});
+router8.get("/:customerId/payments", async (req, res) => {
+  try {
+    res.json(await getPayments(req.params.customerId));
+  } catch (error) {
+    console.error("Error fetching customer payments:", error);
+    res.status(500).json({ message: "Failed to fetch customer payments" });
+  }
+});
+router8.get("/:customerId/invoices", async (req, res) => {
+  try {
+    res.json(await getPayments(req.params.customerId));
+  } catch (error) {
+    console.error("Error fetching customer invoices:", error);
+    res.status(500).json({ message: "Failed to fetch customer invoices" });
+  }
+});
+router8.get("/:customerId/complaints", async (req, res) => {
+  try {
+    res.json(await getComplaints(req.params.customerId));
+  } catch (error) {
+    console.error("Error fetching customer complaints:", error);
+    res.status(500).json({ message: "Failed to fetch customer complaints" });
+  }
+});
+router8.get("/:customerId/activity", async (req, res) => {
+  try {
+    res.json(await getActivity(req.params.customerId));
+  } catch (error) {
+    console.error("Error fetching customer activity:", error);
+    res.status(500).json({ message: "Failed to fetch customer activity" });
+  }
+});
+router8.get("/:customerId/notes", async (req, res) => {
+  try {
+    res.json(await getNotes(req.params.customerId));
+  } catch (error) {
+    console.error("Error fetching customer notes:", error);
+    res.status(500).json({ message: "Failed to fetch customer notes" });
+  }
+});
+router8.post("/:customerId/notes", async (req, res) => {
+  try {
+    await ensureCrmTables();
+    const customer = await getCustomer(req.params.customerId);
+    if (!customer) return res.status(404).json({ message: "Customer not found" });
+    const noteText = `${req.body.noteText || req.body.text || ""}`.trim();
+    if (!noteText) return res.status(400).json({ message: "Note text is required" });
+    const actor = getAdminActor(req);
+    const [note] = await db.insert(adminCustomerNotes).values({
+      customerId: req.params.customerId,
+      noteText,
+      addedByAdminId: actor.actorId || void 0,
+      addedByAdminName: actor.actorName
+    }).returning();
+    await addActivityLog(req.params.customerId, "Admin Note Added", "Admin note added", noteText, req);
+    res.status(201).json(note);
+  } catch (error) {
+    console.error("Error creating customer note:", error);
+    res.status(500).json({ message: "Failed to create customer note" });
+  }
+});
+router8.put("/:customerId/notes/:noteId", async (req, res) => {
+  try {
+    await ensureCrmTables();
+    const noteText = `${req.body.noteText || req.body.text || ""}`.trim();
+    if (!noteText) return res.status(400).json({ message: "Note text is required" });
+    const [updated] = await db.update(adminCustomerNotes).set({ noteText, updatedAt: /* @__PURE__ */ new Date() }).where(and7(eq9(adminCustomerNotes.id, Number(req.params.noteId)), eq9(adminCustomerNotes.customerId, req.params.customerId))).returning();
+    if (!updated) return res.status(404).json({ message: "Note not found" });
+    await addActivityLog(req.params.customerId, "Admin Note Updated", "Admin note updated", noteText, req);
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating customer note:", error);
+    res.status(500).json({ message: "Failed to update customer note" });
+  }
+});
+router8.delete("/:customerId/notes/:noteId", async (req, res) => {
+  try {
+    await ensureCrmTables();
+    const deleted = await db.delete(adminCustomerNotes).where(and7(eq9(adminCustomerNotes.id, Number(req.params.noteId)), eq9(adminCustomerNotes.customerId, req.params.customerId))).returning();
+    if (!deleted.length) return res.status(404).json({ message: "Note not found" });
+    await addActivityLog(req.params.customerId, "Admin Note Deleted", "Admin note deleted", deleted[0].noteText, req);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting customer note:", error);
+    res.status(500).json({ message: "Failed to delete customer note" });
+  }
+});
+router8.put("/:customerId/status", async (req, res) => {
+  try {
+    const status = `${req.body.status || ""}`.toLowerCase();
+    if (!["active", "blocked", "unblocked"].includes(status)) {
+      return res.status(400).json({ message: "Status must be active, blocked, or unblocked" });
+    }
+    const isActive = status === "active" || status === "unblocked";
+    const [updated] = await db.update(users2).set({ isActive, updatedAt: /* @__PURE__ */ new Date() }).where(eq9(users2.id, req.params.customerId)).returning();
+    if (!updated) return res.status(404).json({ message: "Customer not found" });
+    await addActivityLog(
+      req.params.customerId,
+      isActive ? "Customer Activated" : "Customer Blocked",
+      isActive ? "Customer account activated" : "Customer account blocked",
+      isActive ? "Customer can place orders, create subscriptions, and confirm deliveries." : "Customer cannot place new orders, create subscriptions, or mark deliveries as received.",
+      req,
+      { status }
+    );
+    res.json({ id: updated.id, status: updated.isActive ? "Active" : "Blocked" });
+  } catch (error) {
+    console.error("Error updating customer status:", error);
+    res.status(500).json({ message: "Failed to update customer status" });
+  }
+});
+router8.put("/:customerId/address", async (req, res) => {
+  try {
+    const customer = await getCustomer(req.params.customerId);
+    if (!customer) return res.status(404).json({ message: "Customer not found" });
+    const existingAddressId = req.body.id ? Number(req.body.id) : null;
+    const addressPayload = {
+      userId: req.params.customerId,
+      type: req.body.type || "home",
+      address: req.body.address || "",
+      landmark: req.body.landmark || null,
+      city: req.body.city || null,
+      state: req.body.state || null,
+      pincode: req.body.pincode || null,
+      phone: req.body.phone || null,
+      isDefault: req.body.isDefault ?? true
+    };
+    if (!addressPayload.address.trim()) {
+      return res.status(400).json({ message: "Address is required" });
+    }
+    let updatedAddress;
+    if (existingAddressId) {
+      [updatedAddress] = await db.update(addresses).set(addressPayload).where(and7(eq9(addresses.id, existingAddressId), eq9(addresses.userId, req.params.customerId))).returning();
+    } else {
+      [updatedAddress] = await db.insert(addresses).values(addressPayload).returning();
+    }
+    if (!updatedAddress) return res.status(404).json({ message: "Address not found" });
+    await addActivityLog(
+      req.params.customerId,
+      "Address Updated",
+      "Customer delivery address updated",
+      updatedAddress.address,
+      req,
+      { addressId: updatedAddress.id }
+    );
+    res.json(updatedAddress);
+  } catch (error) {
+    console.error("Error updating customer address:", error);
+    res.status(500).json({ message: "Failed to update customer address" });
   }
 });
 var admin_customers_routes_default = router8;
@@ -3101,7 +3932,7 @@ var admin_customers_routes_default = router8;
 init_db();
 init_schema();
 import { Router as Router9 } from "express";
-import { eq as eq10, and as and7, gte as gte3, lte as lte3 } from "drizzle-orm";
+import { desc as desc4, eq as eq10, and as and8, gte as gte3, lte as lte3, sql as sql3 } from "drizzle-orm";
 import Razorpay from "razorpay";
 var router9 = Router9();
 var razorpayInstance = null;
@@ -3114,6 +3945,261 @@ var getRazorpayInstance = () => {
   }
   return razorpayInstance;
 };
+var toAmount2 = (value) => {
+  const amount = Number.parseFloat(`${value ?? 0}`);
+  return Number.isFinite(amount) ? amount : 0;
+};
+var toIsoDate = (date2) => date2.toISOString().split("T")[0];
+var getMonthLabel = (year, month) => new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
+  month: "long",
+  year: "numeric"
+});
+var normalizeBillStatus = (status, amount = 0) => {
+  if (amount <= 0) return "NO_DUES";
+  const normalized = `${status || "unpaid"}`.toLowerCase();
+  if (normalized === "paid") return "PAID";
+  if (normalized === "overdue") return "OVERDUE";
+  return "PENDING";
+};
+var getDaysLeft = (dueDate) => {
+  const due = new Date(dueDate);
+  due.setHours(23, 59, 59, 999);
+  return Math.ceil((due.getTime() - Date.now()) / (1e3 * 60 * 60 * 24));
+};
+var parseBillItems = (items) => {
+  if (Array.isArray(items)) return items;
+  if (typeof items === "string") {
+    try {
+      const parsed = JSON.parse(items);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+var asDate = (value) => {
+  if (!value) return null;
+  const date2 = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date2.getTime()) ? null : date2;
+};
+var countDeliveriesInMonth = (subscription, year, month) => {
+  const startOfMonth = new Date(year, month - 1, 1);
+  const endOfMonth = new Date(year, month, 0);
+  const subscriptionStart = asDate(subscription.startDate) || startOfMonth;
+  const subscriptionEnd = asDate(subscription.endDate) || endOfMonth;
+  const start = subscriptionStart > startOfMonth ? subscriptionStart : startOfMonth;
+  const end = subscriptionEnd < endOfMonth ? subscriptionEnd : endOfMonth;
+  if (start > end) return 0;
+  const normalized = `${subscription.frequency || "daily"}`.toLowerCase();
+  if (normalized.includes("week")) {
+    return Math.max(0, Math.ceil(((end.getTime() - start.getTime()) / (1e3 * 60 * 60 * 24) + 1) / 7));
+  }
+  if (normalized.includes("alternate") || normalized.includes("every other")) {
+    return Math.max(0, Math.ceil(((end.getTime() - start.getTime()) / (1e3 * 60 * 60 * 24) + 1) / 2));
+  }
+  if (normalized.includes("month")) return 1;
+  return Math.max(0, Math.floor((end.getTime() - start.getTime()) / (1e3 * 60 * 60 * 24)) + 1);
+};
+var buildAdjustments = (billLike) => {
+  const adjustments = [];
+  const previousPending = toAmount2(billLike.previousPending ?? billLike.previousDue);
+  const penalty = toAmount2(billLike.penalty);
+  const discount = toAmount2(billLike.discount);
+  if (previousPending > 0) adjustments.push({ type: "Previous Pending", amount: previousPending, direction: "charge" });
+  if (penalty > 0) adjustments.push({ type: "Penalty", amount: penalty, direction: "charge" });
+  if (discount > 0) adjustments.push({ type: "Discount", amount: discount, direction: "discount" });
+  return adjustments;
+};
+var formatStoredBill = (bill) => {
+  const amount = toAmount2(bill.finalAmount);
+  const rawItems = parseBillItems(bill.items);
+  const subscriptionItems = rawItems.filter((item) => `${item.type || item.description || ""}`.toLowerCase().includes("subscription")).map((item) => ({
+    name: item.productName || item.name || item.description || "Subscription delivery",
+    quantity: toAmount2(item.quantity),
+    rate: toAmount2(item.pricePerUnit ?? item.price ?? item.rate),
+    total: Math.round(toAmount2(item.total)),
+    date: item.date || null
+  }));
+  const orderItemsList = rawItems.filter((item) => !`${item.type || item.description || ""}`.toLowerCase().includes("subscription")).map((item) => ({
+    name: item.productName || item.name || item.description || (item.orderId ? `Order #${item.orderId}` : "Order"),
+    quantity: toAmount2(item.quantity || 1),
+    rate: toAmount2(item.pricePerUnit ?? item.price ?? item.rate),
+    total: Math.round(toAmount2(item.total)),
+    date: item.date || null
+  }));
+  return {
+    id: bill.id,
+    billId: bill.id,
+    month: getMonthLabel(Number(bill.year), Number(bill.month)),
+    monthNumber: Number(bill.month),
+    year: Number(bill.year),
+    amount,
+    finalAmount: amount,
+    subscriptionTotal: toAmount2(bill.subscriptionTotal),
+    ordersTotal: toAmount2(bill.ordersTotal),
+    previousDue: toAmount2(bill.previousPending),
+    previousPending: toAmount2(bill.previousPending),
+    penalty: toAmount2(bill.penalty),
+    discount: toAmount2(bill.discount),
+    status: normalizeBillStatus(bill.status, amount),
+    rawStatus: bill.status,
+    dueDate: bill.dueDate,
+    daysLeft: getDaysLeft(bill.dueDate),
+    paidDate: bill.paymentDate ? new Date(bill.paymentDate).toISOString() : "",
+    paymentDate: bill.paymentDate,
+    paymentMethod: bill.paymentMethod || "",
+    notes: bill.notes || "",
+    createdAt: bill.createdAt,
+    updatedAt: bill.updatedAt,
+    items: rawItems,
+    subscriptionItems,
+    orderItems: orderItemsList,
+    adjustments: buildAdjustments(bill),
+    isGenerated: true,
+    isPreview: false
+  };
+};
+var addLineItem = (items, nextItem) => {
+  const key = `${nextItem.name}|${nextItem.rate}|${nextItem.type}`;
+  const existing = items.find((item) => item.key === key);
+  if (existing) {
+    existing.quantity += nextItem.quantity;
+    existing.total += nextItem.total;
+    return;
+  }
+  items.push({ ...nextItem, key });
+};
+async function buildLiveCurrentBill(userId, targetDate = /* @__PURE__ */ new Date()) {
+  const year = targetDate.getFullYear();
+  const month = targetDate.getMonth() + 1;
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+  const startDateStr = toIsoDate(startDate);
+  const endDateStr = toIsoDate(endDate);
+  const subscriptionItems = [];
+  const deliveryRows = await db.select().from(subscriptionDeliveries).where(
+    and8(
+      eq10(subscriptionDeliveries.userId, userId),
+      gte3(subscriptionDeliveries.deliveryDate, startDateStr),
+      lte3(subscriptionDeliveries.deliveryDate, endDateStr)
+    )
+  );
+  const billableDeliveries = deliveryRows.filter((delivery) => {
+    const status = `${delivery.status || ""}`.toLowerCase();
+    return !["missed", "cancelled", "canceled", "skipped"].includes(status) && toAmount2(delivery.quantity) > 0;
+  });
+  if (billableDeliveries.length > 0) {
+    for (const delivery of billableDeliveries) {
+      const subscription = await db.query.milkSubscriptions.findFirst({
+        where: eq10(milkSubscriptions.id, delivery.subscriptionId)
+      });
+      const product = subscription?.productId ? await db.query.products.findFirst({ where: eq10(products.id, subscription.productId) }) : null;
+      const rate = toAmount2(subscription?.pricePerL || product?.price);
+      const quantity = toAmount2(delivery.quantity);
+      addLineItem(subscriptionItems, {
+        type: "subscription",
+        name: `${product?.name || "Subscription"} deliveries`,
+        quantity,
+        rate,
+        total: quantity * rate,
+        source: "actual-deliveries"
+      });
+    }
+  } else {
+    const activeSubscriptions = await db.select().from(milkSubscriptions).where(and8(eq10(milkSubscriptions.userId, userId), eq10(milkSubscriptions.status, "ACTIVE")));
+    for (const subscription of activeSubscriptions) {
+      const product = subscription.productId ? await db.query.products.findFirst({ where: eq10(products.id, subscription.productId) }) : null;
+      const deliveries = countDeliveriesInMonth(subscription, year, month);
+      const rate = toAmount2(subscription.pricePerL || product?.price);
+      const quantity = toAmount2(subscription.quantity) * deliveries;
+      if (quantity <= 0 || rate <= 0) continue;
+      addLineItem(subscriptionItems, {
+        type: "subscription",
+        name: `${product?.name || "Subscription"} estimated deliveries`,
+        quantity,
+        rate,
+        total: quantity * rate,
+        source: "active-subscription-estimate"
+      });
+    }
+  }
+  const monthOrders = await db.select().from(orders).where(
+    and8(
+      eq10(orders.userId, userId),
+      gte3(orders.createdAt, startDate),
+      lte3(orders.createdAt, endDate)
+    )
+  );
+  const orderItemsList = [];
+  for (const order of monthOrders) {
+    const items = await db.select().from(orderItems).where(eq10(orderItems.orderId, order.id));
+    if (items.length === 0) {
+      addLineItem(orderItemsList, {
+        type: "order",
+        name: `Order #${order.id}`,
+        quantity: 1,
+        rate: toAmount2(order.totalAmount),
+        total: toAmount2(order.totalAmount),
+        source: "order"
+      });
+      continue;
+    }
+    for (const item of items) {
+      const product = item.productId ? await db.query.products.findFirst({ where: eq10(products.id, item.productId) }) : null;
+      const rate = toAmount2(item.price);
+      const quantity = toAmount2(item.quantity);
+      addLineItem(orderItemsList, {
+        type: "order",
+        name: `${product?.name || "Order item"} (Order #${order.id})`,
+        quantity,
+        rate,
+        total: toAmount2(item.totalPrice || rate * quantity),
+        source: "order-item"
+      });
+    }
+  }
+  const previousBills = await db.select().from(bills).where(and8(eq10(bills.userId, userId), sql3`${bills.status} in ('unpaid', 'overdue')`));
+  const previousPending = previousBills.filter((bill) => Number(bill.year) < year || Number(bill.year) === year && Number(bill.month) < month).reduce((sum, bill) => sum + toAmount2(bill.finalAmount), 0);
+  const subscriptionTotal = subscriptionItems.reduce((sum, item) => sum + toAmount2(item.total), 0);
+  const ordersTotal = orderItemsList.reduce((sum, item) => sum + toAmount2(item.total), 0);
+  const penalty = 0;
+  const discount = 0;
+  const finalAmount = Math.max(0, subscriptionTotal + ordersTotal + previousPending + penalty - discount);
+  const dueDate = new Date(year, month, 5);
+  return {
+    id: null,
+    billId: null,
+    month: getMonthLabel(year, month),
+    monthNumber: month,
+    year,
+    amount: Math.round(finalAmount),
+    finalAmount: Math.round(finalAmount),
+    subscriptionTotal: Math.round(subscriptionTotal),
+    ordersTotal: Math.round(ordersTotal),
+    previousDue: Math.round(previousPending),
+    previousPending: Math.round(previousPending),
+    penalty,
+    discount,
+    status: normalizeBillStatus("unpaid", finalAmount),
+    rawStatus: "preview",
+    dueDate: dueDate.toISOString(),
+    daysLeft: getDaysLeft(dueDate),
+    paidDate: "",
+    paymentDate: null,
+    paymentMethod: "",
+    notes: "",
+    createdAt: null,
+    updatedAt: null,
+    items: [...subscriptionItems, ...orderItemsList],
+    subscriptionItems: subscriptionItems.map(({ key, ...item }) => ({ ...item, total: Math.round(item.total) })),
+    orderItems: orderItemsList.map(({ key, ...item }) => ({ ...item, total: Math.round(item.total) })),
+    adjustments: buildAdjustments({ previousPending, penalty, discount }),
+    isGenerated: false,
+    isPreview: true,
+    calculationSource: billableDeliveries.length > 0 ? "actual-deliveries" : "active-subscription-estimate"
+  };
+}
 router9.get("/today-requirements", async (req, res) => {
   try {
     const today = /* @__PURE__ */ new Date();
@@ -3143,6 +4229,7 @@ router9.get("/today-requirements", async (req, res) => {
         }
       }
       if (!isDeliveryDay) continue;
+      if (!sub.userId || !sub.productId) continue;
       const user = await db.query.users.findFirst({
         where: eq10(users2.id, sub.userId)
       });
@@ -3152,7 +4239,7 @@ router9.get("/today-requirements", async (req, res) => {
       if (user && product) {
         let defaultAddr = null;
         try {
-          const addrs = await db.select().from(addresses).where(and7(eq10(addresses.userId, sub.userId), eq10(addresses.isDefault, true))).limit(1);
+          const addrs = await db.select().from(addresses).where(and8(eq10(addresses.userId, sub.userId), eq10(addresses.isDefault, true))).limit(1);
           defaultAddr = addrs[0] || null;
         } catch (err) {
           console.error("Error fetching address:", err);
@@ -3206,80 +4293,39 @@ router9.get("/today-requirements", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch requirements" });
   }
 });
+router9.get("/", async (req, res) => {
+  try {
+    const userId = req.session?.userId || req.user?.claims?.sub;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const userBills = await db.select().from(bills).where(eq10(bills.userId, userId)).orderBy(desc4(bills.year), desc4(bills.month), desc4(bills.id));
+    res.set("Cache-Control", "no-store");
+    res.json(userBills.map(formatStoredBill));
+  } catch (error) {
+    console.error("Error fetching bills:", error);
+    res.status(500).json({ message: "Failed to fetch bills" });
+  }
+});
 router9.get("/current", async (req, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
-    const currentDate = /* @__PURE__ */ new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
-    const subscriptions = await db.select().from(milkSubscriptions).where(and7(eq10(milkSubscriptions.userId, userId), eq10(milkSubscriptions.status, "ACTIVE")));
-    const startDate = new Date(currentYear, currentMonth, 1);
-    const endDate = new Date(currentYear, currentMonth + 1, 0);
-    const monthOrders = await db.select().from(orders).where(
-      and7(
-        eq10(orders.userId, userId),
-        gte3(orders.createdAt, startDate),
-        lte3(orders.createdAt, endDate)
+    const now = /* @__PURE__ */ new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    const outstandingBills = await db.select().from(bills).where(
+      and8(
+        eq10(bills.userId, userId),
+        sql3`${bills.status} in ('unpaid', 'overdue')`
       )
-    );
-    let subscriptionTotal = 0;
-    const subscriptionItems = [];
-    for (const sub of subscriptions) {
-      const product = await db.query.products.findFirst({
-        where: eq10(products.id, sub.productId)
-      });
-      if (product) {
-        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-        let deliveryDays = daysInMonth;
-        if (sub.frequency === "weekly") {
-          deliveryDays = Math.ceil(daysInMonth / 7);
-        } else if (sub.frequency === "alternate") {
-          deliveryDays = Math.ceil(daysInMonth / 2);
-        }
-        const total = Number(sub.quantity || 0) * Number(sub.pricePerL || product.price) * deliveryDays;
-        subscriptionTotal += total;
-        subscriptionItems.push({
-          name: `${product.name} (Subscription)`,
-          quantity: deliveryDays,
-          rate: Number(sub.pricePerL || product.price),
-          total: Math.round(total)
-        });
-      }
+    ).orderBy(desc4(bills.year), desc4(bills.month), desc4(bills.id)).limit(1);
+    if (outstandingBills.length > 0) {
+      res.set("Cache-Control", "no-store");
+      return res.json(formatStoredBill(outstandingBills[0]));
     }
-    let orderTotal = 0;
-    for (const order of monthOrders) {
-      orderTotal += Number(order.totalAmount || 0);
-    }
-    const adjustments = [];
-    let penalty = 0;
-    const dueDate = new Date(currentYear, currentMonth + 1, 5);
-    if (/* @__PURE__ */ new Date() > dueDate) {
-      penalty = 50;
-      adjustments.push({ type: "Penalty", amount: penalty });
-    }
-    const monthName = new Date(currentYear, currentMonth).toLocaleDateString("en-IN", {
-      month: "long",
-      year: "numeric"
-    });
-    const totalAmount = subscriptionTotal + orderTotal + penalty;
-    res.json({
-      month: monthName,
-      amount: Math.round(totalAmount),
-      penalty,
-      previousDue: 0,
-      status: "PENDING",
-      dueDate: new Date(currentYear, currentMonth + 1, 5).toISOString(),
-      daysLeft: Math.max(0, Math.ceil((new Date(currentYear, currentMonth + 1, 5).getTime() - (/* @__PURE__ */ new Date()).getTime()) / (1e3 * 60 * 60 * 24))),
-      subscriptionItems,
-      orderItems: monthOrders.map((o) => ({
-        name: `Order #${o.id}`,
-        quantity: 1,
-        rate: Number(o.totalAmount || 0),
-        total: Math.round(Number(o.totalAmount || 0))
-      })),
-      adjustments
-    });
+    const currentGeneratedBill = await db.select().from(bills).where(and8(eq10(bills.userId, userId), eq10(bills.month, month), eq10(bills.year, year))).limit(1);
+    const response = currentGeneratedBill.length > 0 ? formatStoredBill(currentGeneratedBill[0]) : await buildLiveCurrentBill(userId, now);
+    res.set("Cache-Control", "no-store");
+    res.json(response);
   } catch (error) {
     console.error("Error fetching billing:", error);
     res.status(500).json({ message: "Failed to fetch billing data" });
@@ -3287,41 +4333,40 @@ router9.get("/current", async (req, res) => {
 });
 router9.get("/history", async (req, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
-    const sixMonthsAgo = /* @__PURE__ */ new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    const historyOrders = await db.select().from(orders).where(
-      and7(
-        eq10(orders.userId, userId),
-        gte3(orders.createdAt, sixMonthsAgo)
-      )
-    );
-    const monthlyBills = {};
-    historyOrders.forEach((order) => {
-      const monthKey = new Date(order.createdAt).toLocaleDateString("en-IN", {
-        month: "long",
-        year: "numeric"
-      });
-      if (!monthlyBills[monthKey]) {
-        monthlyBills[monthKey] = {
-          month: monthKey,
-          amount: 0,
-          status: order.paymentStatus === "paid" ? "PAID" : "PENDING",
-          paidDate: order.paymentDate?.toISOString() || ""
-        };
-      }
-      monthlyBills[monthKey].amount += Number(order.totalAmount || 0);
-    });
-    res.json(Object.values(monthlyBills));
+    const userBills = await db.select().from(bills).where(eq10(bills.userId, userId)).orderBy(desc4(bills.year), desc4(bills.month), desc4(bills.id));
+    res.set("Cache-Control", "no-store");
+    res.json(userBills.map(formatStoredBill));
   } catch (error) {
     console.error("Error fetching billing history:", error);
     res.status(500).json({ message: "Failed to fetch billing history" });
   }
 });
+router9.get("/:id", async (req, res) => {
+  try {
+    const userId = req.session?.userId || req.user?.claims?.sub;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const billId = Number.parseInt(req.params.id, 10);
+    if (!Number.isFinite(billId)) {
+      return res.status(400).json({ message: "Invalid bill ID" });
+    }
+    const bill = await db.query.bills.findFirst({
+      where: and8(eq10(bills.id, billId), eq10(bills.userId, userId))
+    });
+    if (!bill) {
+      return res.status(404).json({ message: "Bill not found" });
+    }
+    res.set("Cache-Control", "no-store");
+    res.json(formatStoredBill(bill));
+  } catch (error) {
+    console.error("Error fetching bill details:", error);
+    res.status(500).json({ message: "Failed to fetch bill details" });
+  }
+});
 router9.post("/pay", async (req, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
     const { amount, currency = "INR" } = req.body;
     if (!amount || amount <= 0) {
@@ -3352,7 +4397,7 @@ router9.post("/pay", async (req, res) => {
 });
 router9.post("/verify-payment", async (req, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     const crypto = __require("crypto");
@@ -3367,7 +4412,7 @@ router9.post("/verify-payment", async (req, res) => {
         paymentStatus: "paid",
         paymentDate: /* @__PURE__ */ new Date()
       }).where(
-        and7(
+        and8(
           eq10(orders.userId, userId),
           eq10(orders.paymentStatus, "pending"),
           gte3(orders.createdAt, startDate),
@@ -3393,7 +4438,7 @@ var billing_routes_default = router9;
 init_db();
 init_schema();
 import { Router as Router10 } from "express";
-import { eq as eq11, and as and8, gte as gte4, lte as lte4, sql as sql3 } from "drizzle-orm";
+import { eq as eq11, and as and9, gte as gte4, lte as lte4, sql as sql4 } from "drizzle-orm";
 var router10 = Router10();
 router10.get("/", async (req, res) => {
   try {
@@ -3408,7 +4453,7 @@ router10.get("/", async (req, res) => {
     }
     let query = db.select().from(bills);
     if (whereConditions.length > 0) {
-      query = query.where(and8(...whereConditions));
+      query = query.where(and9(...whereConditions));
     }
     const allBills = await query;
     const billsWithUsers = await Promise.all(
@@ -3449,9 +4494,9 @@ router10.patch("/:id/mark-paid", async (req, res) => {
     const { paymentMethod } = req.body;
     const updated = await db.update(bills).set({
       status: "paid",
-      paymentDate: sql3`now()`,
+      paymentDate: sql4`now()`,
       paymentMethod: paymentMethod || "manual",
-      updatedAt: sql3`now()`
+      updatedAt: sql4`now()`
     }).where(eq11(bills.id, billId)).returning();
     if (!updated.length) {
       return res.status(404).json({ message: "Bill not found" });
@@ -3471,7 +4516,7 @@ router10.patch("/:id/extend-due", async (req, res) => {
     }
     const updated = await db.update(bills).set({
       dueDate: new Date(newDueDate).toISOString().split("T")[0],
-      updatedAt: sql3`now()`
+      updatedAt: sql4`now()`
     }).where(eq11(bills.id, billId)).returning();
     if (!updated.length) {
       return res.status(404).json({ message: "Bill not found" });
@@ -3500,7 +4545,7 @@ router10.patch("/:id/penalty", async (req, res) => {
     const updated = await db.update(bills).set({
       penalty: newPenalty,
       finalAmount: newFinal,
-      updatedAt: sql3`now()`
+      updatedAt: sql4`now()`
     }).where(eq11(bills.id, billId)).returning();
     res.json({ success: true, bill: updated[0], message: `Penalty of \u20B9${penaltyAmount} added` });
   } catch (error) {
@@ -3526,7 +4571,7 @@ router10.patch("/:id/discount", async (req, res) => {
     const updated = await db.update(bills).set({
       discount: newDiscount,
       finalAmount: Math.max(0, newFinal),
-      updatedAt: sql3`now()`
+      updatedAt: sql4`now()`
     }).where(eq11(bills.id, billId)).returning();
     res.json({ success: true, bill: updated[0], message: `Discount of \u20B9${discountAmount} applied` });
   } catch (error) {
@@ -3541,7 +4586,7 @@ router10.post("/generate", async (req, res) => {
       return res.status(400).json({ message: "userId, month, and year are required" });
     }
     const existingBill = await db.select().from(bills).where(
-      and8(
+      and9(
         eq11(bills.userId, userId),
         eq11(bills.month, month),
         eq11(bills.year, year)
@@ -3554,7 +4599,7 @@ router10.post("/generate", async (req, res) => {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     const monthOrders = await db.select().from(orders).where(
-      and8(
+      and9(
         eq11(orders.userId, userId),
         gte4(orders.createdAt, startDate),
         lte4(orders.createdAt, endDate)
@@ -4486,13 +5531,13 @@ var rbac_routes_default = router11;
 init_db();
 init_schema();
 import { Router as Router12 } from "express";
-import { eq as eq13, asc as asc2, and as and9, lte as lte5, gte as gte5, isNull as isNull2, or as or2 } from "drizzle-orm";
+import { eq as eq13, asc as asc2, and as and10, lte as lte5, gte as gte5, isNull as isNull2, or as or2 } from "drizzle-orm";
 var router12 = Router12();
 router12.get("/public", async (req, res) => {
   try {
     const now = /* @__PURE__ */ new Date();
     const activeBanners = await db.select().from(banners).where(
-      and9(
+      and10(
         eq13(banners.isActive, true),
         or2(
           isNull2(banners.startDate),
@@ -4629,7 +5674,7 @@ var banners_routes_default = router12;
 init_db();
 init_schema();
 import { Router as Router13 } from "express";
-import { eq as eq14, asc as asc3, desc as desc3, and as and10, lte as lte6, gte as gte6, isNull as isNull3, or as or3 } from "drizzle-orm";
+import { eq as eq14, asc as asc3, desc as desc5, and as and11, lte as lte6, gte as gte6, isNull as isNull3, or as or3 } from "drizzle-orm";
 var router13 = Router13();
 router13.get("/ethos/public", async (req, res) => {
   try {
@@ -4815,7 +5860,7 @@ router13.get("/deals/public", async (req, res) => {
       priority: productDeals.priority,
       product: products
     }).from(productDeals).innerJoin(products, eq14(productDeals.productId, products.id)).where(
-      and10(
+      and11(
         eq14(productDeals.isActive, true),
         eq14(products.isActive, true),
         or3(isNull3(productDeals.startsAt), lte6(productDeals.startsAt, now)),
@@ -4902,7 +5947,7 @@ router13.delete("/deals/:id", requireAdminAccess, async (req, res) => {
 });
 router13.get("/new-products/public", async (req, res) => {
   try {
-    const newProducts = await db.select().from(products).where(and10(eq14(products.isActive, true), eq14(products.isNew, true))).orderBy(desc3(products.launchedAt), desc3(products.createdAt)).limit(8);
+    const newProducts = await db.select().from(products).where(and11(eq14(products.isActive, true), eq14(products.isNew, true))).orderBy(desc5(products.launchedAt), desc5(products.createdAt)).limit(8);
     res.json(newProducts);
   } catch (error) {
     console.error("Error fetching new products:", error);
@@ -5152,7 +6197,7 @@ var cms_routes_default = router14;
 // server/routes/contact-submissions.routes.ts
 init_db();
 init_schema();
-import { eq as eq16, desc as desc4 } from "drizzle-orm";
+import { eq as eq16, desc as desc6 } from "drizzle-orm";
 function setupContactSubmissionsRoutes(app2) {
   app2.post("/api/contact-submissions", async (req, res) => {
     try {
@@ -5168,7 +6213,7 @@ function setupContactSubmissionsRoutes(app2) {
   });
   app2.get("/api/admin/contact-submissions", async (req, res) => {
     try {
-      const submissions = await db.select().from(contactSubmissions).orderBy(desc4(contactSubmissions.createdAt));
+      const submissions = await db.select().from(contactSubmissions).orderBy(desc6(contactSubmissions.createdAt));
       res.json(submissions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch submissions" });
@@ -5290,11 +6335,11 @@ async function registerRoutes(app2) {
   });
   app2.delete("/api/admin/orders/:id", requireAdminAccess, async (req, res) => {
     try {
-      const { orders: orders2, orderItems: orderItems4 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { orders: orders2, orderItems: orderItems2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const { eq: eq23 } = await import("drizzle-orm");
       const orderId = parseInt(req.params.id);
-      await db2.delete(orderItems4).where(eq23(orderItems4.orderId, orderId));
+      await db2.delete(orderItems2).where(eq23(orderItems2.orderId, orderId));
       const deleted = await db2.delete(orders2).where(eq23(orders2.id, orderId)).returning();
       if (!deleted.length) return res.status(404).json({ message: "Order not found" });
       res.json({ success: true, message: "Order deleted successfully" });
@@ -5352,18 +6397,28 @@ async function registerRoutes(app2) {
   app2.get("/api/bills/:billId/pdf", async (req, res) => {
     try {
       const billId = parseInt(req.params.billId);
-      const { getBillInvoiceData: getBillInvoiceData2, createInvoiceHTML: createInvoiceHTML2 } = await Promise.resolve().then(() => (init_generateInvoice(), generateInvoice_exports));
+      const { getBillInvoiceData: getBillInvoiceData2 } = await Promise.resolve().then(() => (init_generateInvoice(), generateInvoice_exports));
+      const { generateInvoicePDF: generateInvoicePDF2 } = await Promise.resolve().then(() => (init_generateInvoicePDF(), generateInvoicePDF_exports));
       const invoiceData = await getBillInvoiceData2(billId);
       if (!invoiceData) {
         return res.status(404).json({ message: "Bill not found" });
       }
-      const html = createInvoiceHTML2(invoiceData);
-      res.setHeader("Content-Type", "text/html");
-      res.setHeader("Content-Disposition", `attachment; filename="invoice_${billId}.html"`);
-      res.send(html);
+      const userId = req.session?.userId;
+      const isAdmin = req.session?.isAdminLoggedIn;
+      const { bills: bills2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { eq: eq23 } = await import("drizzle-orm");
+      const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const billRecord = await db2.select().from(bills2).where(eq23(bills2.id, billId));
+      if (!billRecord.length) {
+        return res.status(404).json({ message: "Bill not found" });
+      }
+      if (!isAdmin && billRecord[0].userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized to download this invoice" });
+      }
+      generateInvoicePDF2(invoiceData, res);
     } catch (error) {
-      console.error("Error generating invoice:", error);
-      res.status(500).json({ message: "Failed to generate invoice" });
+      console.error("Error generating invoice PDF:", error);
+      res.status(500).json({ message: "Failed to generate invoice PDF" });
     }
   });
   app2.post("/api/billing/:billId/mark-paid", async (req, res) => {
@@ -5783,7 +6838,7 @@ async function seedDatabase() {
 // server/jobs/generateMonthlyBills.ts
 init_db();
 init_schema();
-import { eq as eq20, and as and11, gte as gte7, lte as lte7 } from "drizzle-orm";
+import { eq as eq20, and as and12, gte as gte7, lte as lte7 } from "drizzle-orm";
 async function generateMonthlyBills() {
   console.log("\u{1F550} Starting monthly bill generation...");
   try {
@@ -5794,7 +6849,7 @@ async function generateMonthlyBills() {
     const allUsers = await db.select().from(users2);
     for (const user of allUsers) {
       const existingBill = await db.select().from(bills).where(
-        and11(
+        and12(
           eq20(bills.userId, user.id),
           eq20(bills.month, month),
           eq20(bills.year, year)
@@ -5807,7 +6862,7 @@ async function generateMonthlyBills() {
       const startDateStr = `${year}-${String(month).padStart(2, "0")}-01`;
       const endDateStr = `${year}-${String(month).padStart(2, "0")}-${new Date(year, month, 0).getDate()}`;
       const subscriptionDeliveries_list = await db.select().from(subscriptionDeliveries).where(
-        and11(
+        and12(
           eq20(subscriptionDeliveries.userId, user.id),
           gte7(subscriptionDeliveries.deliveryDate, startDateStr),
           lte7(subscriptionDeliveries.deliveryDate, endDateStr)
@@ -5816,7 +6871,7 @@ async function generateMonthlyBills() {
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
       const monthOrders = await db.select().from(orders).where(
-        and11(
+        and12(
           eq20(orders.userId, user.id),
           gte7(orders.createdAt, startDate),
           lte7(orders.createdAt, endDate)
@@ -5856,7 +6911,7 @@ async function generateMonthlyBills() {
         });
       }
       const previousBill = await db.select().from(bills).where(
-        and11(
+        and12(
           eq20(bills.userId, user.id),
           eq20(bills.status, "unpaid")
         )
@@ -5915,7 +6970,7 @@ async function updateOverdueBills() {
 init_db();
 init_schema();
 import { Router as Router15 } from "express";
-import { eq as eq21, and as and12 } from "drizzle-orm";
+import { eq as eq21, and as and13 } from "drizzle-orm";
 import bcryptjs2 from "bcryptjs";
 var router15 = Router15();
 router15.post("/login", async (req, res) => {
@@ -6030,7 +7085,7 @@ router15.get("/earnings/:partnerId", async (req, res) => {
       dateFilter = { start: monthAgo, end: today };
     }
     let completedDeliveries = await db.query.deliveryAssignments.findMany({
-      where: and12(
+      where: and13(
         eq21(deliveryAssignments.partnerId, parseInt(partnerId)),
         eq21(deliveryAssignments.status, "delivered")
       )
@@ -6124,7 +7179,7 @@ router15.get("/me/:partnerId", async (req, res) => {
     }
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const todayDeliveries = await db.query.deliveryAssignments.findMany({
-      where: and12(
+      where: and13(
         eq21(deliveryAssignments.partnerId, parseInt(partnerId)),
         eq21(deliveryAssignments.assignmentDate, today)
       )
@@ -6144,7 +7199,7 @@ router15.get("/today/:partnerId", async (req, res) => {
     const { partnerId } = req.params;
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const assignments = await db.query.deliveryAssignments.findMany({
-      where: and12(
+      where: and13(
         eq21(deliveryAssignments.partnerId, parseInt(partnerId)),
         eq21(deliveryAssignments.assignmentDate, today)
       )
@@ -6275,7 +7330,7 @@ var delivery_routes_default = router15;
 init_db();
 init_schema();
 import { Router as Router16 } from "express";
-import { eq as eq22, and as and13 } from "drizzle-orm";
+import { eq as eq22, and as and14 } from "drizzle-orm";
 import bcrypt2 from "bcryptjs";
 var router16 = Router16();
 router16.get("/", async (req, res) => {
@@ -6289,7 +7344,7 @@ router16.get("/", async (req, res) => {
     let allPartners = [];
     if (conditions.length > 0) {
       allPartners = await db.query.deliveryPartners.findMany({
-        where: and13(...conditions)
+        where: and14(...conditions)
       });
     } else {
       allPartners = await db.query.deliveryPartners.findMany();

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 export default function BrandSettings() {
   const { toast } = useToast();
@@ -19,6 +20,12 @@ export default function BrandSettings() {
     faviconUrl: "",
     primaryColor: "#16A34A",
     secondaryColor: "#FFF9F2",
+    upiId: "",
+    bankName: "",
+    accountNumber: "",
+    ifscCode: "",
+    qrCodeUrl: "",
+    isOnlinePaymentEnabled: false,
   });
 
   const { data: settings, isLoading } = useQuery({
@@ -37,6 +44,12 @@ export default function BrandSettings() {
         faviconUrl: settings.faviconUrl || "",
         primaryColor: settings.primaryColor || "#16A34A",
         secondaryColor: settings.secondaryColor || "#FFF9F2",
+        upiId: settings.upiId || "",
+        bankName: settings.bankName || "",
+        accountNumber: settings.accountNumber || "",
+        ifscCode: settings.ifscCode || "",
+        qrCodeUrl: settings.qrCodeUrl || "",
+        isOnlinePaymentEnabled: settings.isOnlinePaymentEnabled || false,
       });
     }
   }, [settings]);
@@ -62,7 +75,7 @@ export default function BrandSettings() {
     },
   });
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: "logoUrl" | "faviconUrl") => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: "logoUrl" | "faviconUrl" | "qrCodeUrl") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -263,6 +276,109 @@ export default function BrandSettings() {
                         />
                       </Button>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment Settings */}
+          <Card className="lg:col-span-2 border-2 border-green-50 shadow-sm rounded-3xl overflow-hidden">
+            <CardHeader className="bg-green-50/50">
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Palette className="w-5 h-5 text-green-600" />
+                  Online Payment & QR Settings
+                </span>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="isOnlinePaymentEnabled" className="text-sm font-semibold cursor-pointer">
+                    Enable QR / Bank Payments
+                  </Label>
+                  <Switch
+                    id="isOnlinePaymentEnabled"
+                    checked={formData.isOnlinePaymentEnabled}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, isOnlinePaymentEnabled: checked })
+                    }
+                  />
+                </div>
+              </CardTitle>
+              <CardDescription>Configure bank details, UPI, and scan-to-pay QR code for customer payments.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="upiId">UPI ID</Label>
+                  <Input
+                    id="upiId"
+                    value={formData.upiId}
+                    onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
+                    placeholder="e.g., brandname@okaxis"
+                    className="rounded-xl border-gray-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bankName">Bank Name</Label>
+                  <Input
+                    id="bankName"
+                    value={formData.bankName}
+                    onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                    placeholder="e.g., State Bank of India"
+                    className="rounded-xl border-gray-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="accountNumber">Account Number</Label>
+                  <Input
+                    id="accountNumber"
+                    value={formData.accountNumber}
+                    onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                    placeholder="e.g., 123456789012"
+                    className="rounded-xl border-gray-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ifscCode">IFSC Code</Label>
+                  <Input
+                    id="ifscCode"
+                    value={formData.ifscCode}
+                    onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value })}
+                    placeholder="e.g., SBIN0001234"
+                    className="rounded-xl border-gray-200"
+                  />
+                </div>
+              </div>
+
+              {/* QR Code Upload */}
+              <div className="space-y-4 pt-4 border-t border-gray-100">
+                <Label>Payment QR Code</Label>
+                <div className="flex flex-col items-center gap-4 p-6 border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50/50">
+                  {formData.qrCodeUrl ? (
+                    <div className="relative w-48 h-48 bg-white rounded-2xl shadow-md p-2 border border-gray-100 flex items-center justify-center">
+                      <img src={formData.qrCodeUrl} alt="QR Code Preview" className="max-w-full max-h-full object-contain" />
+                      <button
+                        onClick={() => setFormData((prev) => ({ ...prev, qrCodeUrl: "" }))}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-48 h-48 bg-gray-100 rounded-2xl border border-gray-200 flex items-center justify-center text-gray-300">
+                      <Upload className="w-8 h-8" />
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-2">Upload payment QR code image (GPay, PhonePe, Paytm, etc.)</p>
+                    <Button variant="outline" className="rounded-xl relative">
+                      Choose QR Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, "qrCodeUrl")}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                    </Button>
                   </div>
                 </div>
               </div>

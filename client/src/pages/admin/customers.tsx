@@ -17,7 +17,7 @@ export default function CustomersAdmin() {
   });
 
   const totalCustomers = customers.length;
-  const activeCustomers = customers.filter((c: any) => c.orderCount > 0).length;
+  const activeCustomers = customers.filter((c: any) => c.status !== "Blocked").length;
   const totalRevenue = customers.reduce((sum: number, c: any) => sum + parseFloat(c.totalSpending || "0"), 0);
 
   return (
@@ -65,6 +65,7 @@ export default function CustomersAdmin() {
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Subscriptions</th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Spent</th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Joined</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -75,14 +76,13 @@ export default function CustomersAdmin() {
                     style={{ 
                       borderBottom: "1px solid #e5e7eb",
                       cursor: "pointer",
-                      transition: "background-color 0.2s",
-                      "&:hover": { background: "#f3f4f6" }
+                      transition: "background-color 0.2s"
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f3f4f6"}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                   >
-                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600", color: "#111827" }}>{customer.name}</td>
-                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>{customer.email}</td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600", color: "#111827", textDecoration: "underline", textUnderlineOffset: "3px" }}>{customer.name}</td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280", textDecoration: "underline", textUnderlineOffset: "3px" }}>{customer.email}</td>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>{customer.phone}</td>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600", color: "#3b82f6" }}>
                       {customer.orderCount}
@@ -95,6 +95,26 @@ export default function CustomersAdmin() {
                     </td>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
                       {new Date(customer.joinedDate).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setLocation(`/admin/customers/${customer.id}`);
+                        }}
+                        style={{
+                          padding: "0.4rem 0.75rem",
+                          background: "#111827",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "0.375rem",
+                          cursor: "pointer",
+                          fontWeight: "600",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        View Details
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -34,7 +34,7 @@ import {
   type InsertDriver,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, or, isNull, lte, gte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations - mandatory for Replit Auth
@@ -96,7 +96,7 @@ export interface IStorage {
   clearCart(userId: string): Promise<void>;
   
   // Inward log operations
-  createInwardLog(inwardLog: InsertInwardLog): Promise<InwardLog>;
+  createInwardLog(inwardLog: any): Promise<any>;
   
   // Vendor approval
   approveVendor(vendorId: number): Promise<Vendor>;
@@ -109,6 +109,8 @@ export interface IStorage {
   // Driver management
   addDriver(driver: InsertDriver): Promise<Driver>;
   getDriversByVendor(vendorId: number): Promise<Driver[]>;
+  getAllStockMovements(): Promise<any[]>;
+  getStockMovementsByProduct(productId: number): Promise<any[]>;
   
   // Subscription management - get all subscriptions
   getAllSubscriptions(): Promise<(MilkSubscription & { user?: User })[]>;
@@ -286,18 +288,20 @@ export class DatabaseStorage implements IStorage {
     if (status.toUpperCase() === 'DELIVERED' && order && order.status.toUpperCase() !== 'DELIVERED') {
       const items = await this.getOrderItemsByOrder(id);
       for (const item of items) {
-        await this.decrementProductStock(item.productId, item.quantity);
-        
-        // Record movement
-        await this.recordStockMovement({
-          productId: item.productId,
-          type: 'OUT',
-          reason: 'ORDER_DELIVERED',
-          quantity: item.quantity,
-          previousStock: 0, // Would need more queries to get exact
-          newStock: 0,
-          notes: `Order #${id} delivered`
-        });
+        if (item.productId) {
+          await this.decrementProductStock(item.productId, item.quantity);
+          
+          // Record movement
+          await this.recordStockMovement({
+            productId: item.productId,
+            type: 'OUT',
+            reason: 'ORDER_DELIVERED',
+            quantity: item.quantity,
+            previousStock: 0, // Would need more queries to get exact
+            newStock: 0,
+            notes: `Order #${id} delivered`
+          });
+        }
       }
     }
     
@@ -357,7 +361,7 @@ export class DatabaseStorage implements IStorage {
   // Milk subscription operations
   async getMilkSubscriptionByUser(userId: string): Promise<MilkSubscription | undefined> {
     const [subscription] = await db.select().from(milkSubscriptions)
-      .where(and(eq(milkSubscriptions.userId, userId), eq(milkSubscriptions.isActive, true)));
+      .where(and(eq(milkSubscriptions.userId, userId), eq(milkSubscriptions.status, "ACTIVE")));
     return subscription;
   }
 
@@ -451,7 +455,7 @@ export class DatabaseStorage implements IStorage {
     if (existingItem.length > 0) {
       // Update quantity
       const [updatedItem] = await db.update(cartItems)
-        .set({ quantity: existingItem[0].quantity + quantity })
+        .set({ quantity: (existingItem[0].quantity || 0) + quantity })
         .where(eq(cartItems.id, existingItem[0].id))
         .returning();
       return updatedItem;
@@ -585,6 +589,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(drivers.vendorId, vendorId))
       .orderBy(desc(drivers.createdAt));
   }
+
+  async getAllStockMovements(): Promise<any[]> {
+    return [];
+  }
+
+  async getStockMovementsByProduct(productId: number): Promise<any[]> {
+    return [];
+  }
   
   // Customer management - get all customers
   async getAllCustomers(): Promise<User[]> {
@@ -601,7 +613,7 @@ export class DatabaseStorage implements IStorage {
     // Enrich with user data
     const enrichedSubscriptions = await Promise.all(
       allSubscriptions.map(async (sub) => {
-        const user = await this.getUser(sub.userId);
+        const user = sub.userId ? await this.getUser(sub.userId) : undefined;
         return { ...sub, user };
       })
     );

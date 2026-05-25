@@ -21,9 +21,9 @@ export async function generateDailyDeliveries() {
         await db.insert(subscriptionDeliveries).values({
           subscriptionId: sub.id,
           userId: sub.userId,
-          deliveryDate: new Date(tomorrowStr),
+          deliveryDate: tomorrowStr,
           quantity: sub.quantity,
-          status: "UPCOMING",
+          status: "Pending",
         }).catch(() => null); // Ignore duplicates
       } else if (sub.frequency === "weekly") {
         // Only generate on Sundays
@@ -32,9 +32,9 @@ export async function generateDailyDeliveries() {
           await db.insert(subscriptionDeliveries).values({
             subscriptionId: sub.id,
             userId: sub.userId,
-            deliveryDate: new Date(tomorrowStr),
+            deliveryDate: tomorrowStr,
             quantity: sub.quantity,
-            status: "UPCOMING",
+            status: "Pending",
           }).catch(() => null);
         }
       } else if (sub.frequency === "alternate") {
@@ -49,9 +49,9 @@ export async function generateDailyDeliveries() {
           await db.insert(subscriptionDeliveries).values({
             subscriptionId: sub.id,
             userId: sub.userId,
-            deliveryDate: new Date(tomorrowStr),
+            deliveryDate: tomorrowStr,
             quantity: sub.quantity,
-            status: "UPCOMING",
+            status: "Pending",
           }).catch(() => null);
         }
       }

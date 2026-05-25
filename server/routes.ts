@@ -23,6 +23,11 @@ import homepageRoutes from "./routes/homepage.routes";
 import cmsRoutes from "./routes/cms.routes";
 import { setupContactSubmissionsRoutes } from "./routes/contact-submissions.routes";
 import { startDeliveryScheduler } from "./jobs/auto-delivery";
+import blogRoutes from "./routes/blog.routes";
+import videoBlogRoutes from "./routes/video-blog.routes";
+import imageGalleryRoutes from "./routes/image-gallery.routes";
+import videoGalleryRoutes from "./routes/video-gallery.routes";
+import mediaUploadRoutes from "./routes/media.routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -98,6 +103,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/banners', bannersRoutes);
   app.use('/api/homepage', homepageRoutes);
   app.use('/api/cms', cmsRoutes);
+  app.use('/api', blogRoutes);
+  app.use('/api', videoBlogRoutes);
+  app.use('/api', imageGalleryRoutes);
+  app.use('/api', videoGalleryRoutes);
+  app.use('/api/admin/media', mediaUploadRoutes);
+
+  // User payment screenshot upload (authenticated users only)
+  app.use('/api/media', mediaUploadRoutes);
+
+  // User submits screenshot URL to their bill
+  app.post('/api/billing/:billId/submit-screenshot', async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: 'Not authenticated' });
+
+      const billId = parseInt(req.params.billId);
+      const { screenshotUrl } = req.body;
+
+      if (!screenshotUrl) return res.status(400).json({ message: 'screenshotUrl is required' });
+
+      const { bills } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      const { db } = await import('./db');
+
+      // Verify bill belongs to user
+      const bill = await db.select().from(bills).where(eq(bills.id, billId));
+      if (!bill.length || bill[0].userId !== userId) {
+        return res.status(403).json({ message: 'Unauthorized' });
+      }
+
+      const updated = await db.update(bills).set({
+        paymentScreenshotUrl: screenshotUrl,
+        paymentScreenshotStatus: 'pending_review',
+        paymentScreenshotUploadedAt: new Date(),
+        updatedAt: new Date(),
+      }).where(eq(bills.id, billId)).returning();
+
+      res.json({ success: true, bill: updated[0] });
+    } catch (error) {
+      console.error('Error submitting screenshot:', error);
+      res.status(500).json({ message: 'Failed to submit screenshot' });
+    }
+  });
 
   // RBAC-protected routes LAST - catches remaining /api/* routes
   app.use('/api', rbacRoutes);
@@ -150,20 +198,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/bills/:billId/pdf', async (req: any, res) => {
     try {
       const billId = parseInt(req.params.billId);
-      const { getBillInvoiceData, createInvoiceHTML } = await import('./utils/generateInvoice');
+      const { getBillInvoiceData } = await import('./utils/generateInvoice');
+      const { generateInvoicePDF } = await import('./utils/generateInvoicePDF');
       
       const invoiceData = await getBillInvoiceData(billId);
       if (!invoiceData) {
         return res.status(404).json({ message: 'Bill not found' });
       }
 
-      const html = createInvoiceHTML(invoiceData);
-      res.setHeader('Content-Type', 'text/html');
-      res.setHeader('Content-Disposition', `attachment; filename="invoice_${billId}.html"`);
-      res.send(html);
+      // Check authorization
+      const userId = req.session?.userId;
+      const isAdmin = req.session?.isAdminLoggedIn;
+      
+      const { bills } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      const { db } = await import('./db');
+      const billRecord = await db.select().from(bills).where(eq(bills.id, billId));
+      
+      if (!billRecord.length) {
+        return res.status(404).json({ message: 'Bill not found' });
+      }
+
+      if (!isAdmin && billRecord[0].userId !== userId) {
+        return res.status(403).json({ message: 'Unauthorized to download this invoice' });
+      }
+
+      generateInvoicePDF(invoiceData, res);
     } catch (error) {
-      console.error('Error generating invoice:', error);
-      res.status(500).json({ message: 'Failed to generate invoice' });
+      console.error('Error generating invoice PDF:', error);
+      res.status(500).json({ message: 'Failed to generate invoice PDF' });
     }
   });
 

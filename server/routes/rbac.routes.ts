@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { storage } from '../storage';
 import { checkRole, requireCustomer, requireVendor, requireDelivery, requireAdmin, requireAdminAccess } from '../middleware/auth';
-import { insertProductSchema, insertOrderSchema, insertMilkSubscriptionSchema, products } from '@shared/schema';
+import { insertProductSchema, insertOrderSchema, insertMilkSubscriptionSchema, products, users } from '@shared/schema';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
 import path from 'path';
@@ -45,7 +45,7 @@ router.post('/auth/verify-phone', async (req: any, res) => {
     req.session.userRole = user.role || "customer";
     req.session.userEmail = user.email || null;
     
-    req.session.save((err) => {
+    req.session.save((err: any) => {
       if (err) {
         console.error("Session save error:", err);
         return res.status(500).json({ message: "Session save failed" });
@@ -86,7 +86,7 @@ router.post('/auth/register', async (req: any, res) => {
     req.session.userRole = user.role || "customer";
     req.session.userEmail = user.email || null;
     
-    req.session.save((err) => {
+    req.session.save((err: any) => {
       if (err) {
         console.error("Session save error:", err);
         return res.status(500).json({ message: "Session save failed" });
@@ -155,7 +155,7 @@ router.put('/user/profile', async (req: any, res) => {
       phone,
       address,
       gender,
-      dob: dob ? new Date(dob) : undefined
+      dob: dob ? dob : undefined
     });
 
     res.json({
@@ -372,7 +372,6 @@ router.patch('/milk-subscription/:id/pause', requireCustomer, async (req: any, r
     }
 
     const updated = await storage.updateMilkSubscription(subscriptionId, {
-      isPaused: true,
       status: 'PAUSED'
     });
 
@@ -395,7 +394,6 @@ router.patch('/milk-subscription/:id/resume', requireCustomer, async (req: any, 
     }
 
     const updated = await storage.updateMilkSubscription(subscriptionId, {
-      isPaused: false,
       status: 'ACTIVE'
     });
 
@@ -461,8 +459,8 @@ router.get(['/vendors/dashboard', '/vendor/dashboard', '/vendor/me/dashboard'], 
     const metrics = {
       dailyRequirement: vendor.requirementToday || 0,
       weeklyRevenue: vendor.weeklyEarnings || "0.00",
-      fulfillmentRate: vendor.requirementToday > 0 
-        ? ((vendor.circulatedLiters / vendor.requirementToday) * 100).toFixed(2)
+      fulfillmentRate: (vendor.requirementToday || 0) > 0 
+        ? (((vendor.circulatedLiters || 0) / (vendor.requirementToday || 1)) * 100).toFixed(2)
         : "0.00",
       circulatedLiters: vendor.circulatedLiters || 0,
       revenueToday: vendor.revenueToday || "0.00",
@@ -702,7 +700,7 @@ router.post('/admin/update-password', async (req, res) => {
     }
 
     // Update password (in production, hash this with bcrypt)
-    await storage.updateUser(user.id, { password: newPassword });
+    await storage.updateUser(user.id, { passwordHash: newPassword });
 
     res.json({ success: true, message: "Password updated successfully" });
   } catch (error) {
@@ -921,14 +919,15 @@ router.put('/admin/products/:id', requireAdminAccess, async (req: any, res) => {
     // Record stock movement if stock value changed
     if (updates.stock !== undefined && existingProduct && existingProduct.stock !== updates.stock) {
       const userId = req.user?.claims?.sub;
-      const quantityDiff = updates.stock - existingProduct.stock;
+      const previousStock = existingProduct.stock || 0;
+      const quantityDiff = updates.stock - previousStock;
       
       await storage.recordStockMovement({
         productId,
         type: quantityDiff > 0 ? 'IN' : 'OUT',
         reason: 'ADMIN_ADJUST',
         quantity: quantityDiff,
-        previousStock: existingProduct.stock,
+        previousStock,
         newStock: updates.stock,
         createdBy: userId,
         notes: 'Manual stock adjustment by admin'

@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import MainPageLayout from "@/components/layout/main-page-layout";
-import { Banknote, CreditCard, Mail, Phone, MapPin } from "lucide-react";
+import { Banknote, Mail, Phone, MapPin } from "lucide-react";
 
 interface CartItem {
   id: number;
@@ -27,18 +27,54 @@ interface User {
 export default function CheckoutAddressPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [isProcessing, setIsProcessing] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [userInfo, setUserInfo] = useState<User>({});
   const [isLoading, setIsLoading] = useState(true);
 
+  const emptyCartSummary = {
+    subtotal: 0,
+    deliveryFee: 0,
+    discount: 0,
+    total: 0,
+    itemCount: 0,
+  };
+
+  const resetCartState = async () => {
+    await queryClient.cancelQueries({ queryKey: ["cart"] });
+    await queryClient.cancelQueries({ queryKey: ["cart-summary"] });
+    queryClient.setQueryData(["cart"], []);
+    queryClient.setQueryData(["cart-summary"], emptyCartSummary);
+  };
+
+  const clearServerCart = async () => {
+    const clearRes = await fetch("/api/cart", {
+      method: "DELETE",
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    if (!clearRes.ok) return false;
+
+    const verifyRes = await fetch("/api/cart", {
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    if (!verifyRes.ok) return false;
+    const data = await verifyRes.json();
+    const items = Array.isArray(data) ? data : data.items || [];
+    return items.length === 0;
+  };
+
   // Fetch cart items
   const { data: cartItems = [] } = useQuery({
-    queryKey: ["cart_items"],
+    queryKey: ["cart"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/cart", { credentials: "include" });
+        const res = await fetch("/api/cart", { credentials: "include", cache: "no-store" });
         if (!res.ok) return [];
         const data = await res.json();
         return Array.isArray(data) ? data : (data.items || []);
@@ -98,6 +134,7 @@ export default function CheckoutAddressPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({
           items: cartItems,
           total: total,
@@ -109,12 +146,32 @@ export default function CheckoutAddressPage() {
 
       if (res.ok) {
         const order = await res.json();
+        await resetCartState();
         toast({
           title: "✅ Order Placed Successfully!",
           description: `Order ID: ${order.id}`,
         });
         
-        await fetch("/api/cart", { method: "DELETE", credentials: "include" });
+        const serverCartCleared = await clearServerCart();
+        await resetCartState();
+
+        if (serverCartCleared) {
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["cart"], refetchType: "all" }),
+            queryClient.invalidateQueries({ queryKey: ["cart-summary"], refetchType: "all" }),
+            queryClient.invalidateQueries({ queryKey: ["user-orders"], refetchType: "all" }),
+            queryClient.invalidateQueries({ queryKey: ["/api/orders"], refetchType: "all" }),
+          ]);
+        } else {
+          queryClient.removeQueries({ queryKey: ["cart"] });
+          queryClient.setQueryData(["cart"], []);
+          queryClient.setQueryData(["cart-summary"], emptyCartSummary);
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["user-orders"], refetchType: "all" }),
+            queryClient.invalidateQueries({ queryKey: ["/api/orders"], refetchType: "all" }),
+          ]);
+        }
+
         setTimeout(() => setLocation("/orders"), 1500);
       } else {
         throw new Error("Failed to create order");
@@ -281,16 +338,16 @@ export default function CheckoutAddressPage() {
               {/* Payment Method */}
               <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Payment Method</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <label 
-                    className={`flex items-center p-4 border-2 rounded-2xl cursor-pointer transition-all ${paymentMethod === "cash" ? "border-green-600 bg-green-50/50 shadow-md" : "border-gray-100 hover:border-gray-200"}`}
+                    className="flex items-center p-4 border-2 rounded-2xl border-green-600 bg-green-50/50 shadow-md"
                   >
                     <input
                       type="radio"
                       name="payment"
                       value="cash"
-                      checked={paymentMethod === "cash"}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      checked={true}
+                      readOnly
                       className="w-5 h-5 accent-green-600"
                     />
                     <div className="ml-4 flex items-center gap-3">
@@ -300,28 +357,6 @@ export default function CheckoutAddressPage() {
                       <div>
                         <p className="font-bold text-gray-900">Cash on Delivery</p>
                         <p className="text-gray-500 text-xs">Pay at your doorstep</p>
-                      </div>
-                    </div>
-                  </label>
-
-                  <label 
-                    className={`flex items-center p-4 border-2 rounded-2xl cursor-pointer transition-all ${paymentMethod === "razorpay" ? "border-green-600 bg-green-50/50 shadow-md" : "border-gray-100 hover:border-gray-200"}`}
-                  >
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="razorpay"
-                      checked={paymentMethod === "razorpay"}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-5 h-5 accent-green-600"
-                    />
-                    <div className="ml-4 flex items-center gap-3">
-                      <div className="p-2 bg-white rounded-lg shadow-sm">
-                        <CreditCard className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900">Razorpay</p>
-                        <p className="text-gray-500 text-xs">Secure Online Payment</p>
                       </div>
                     </div>
                   </label>

@@ -131,7 +131,7 @@ export async function setupAuth(app: Express) {
       const strategy = new Strategy(
         {
           name: `replitauth:${domain}`,
-          config,
+          config: config!,
           scope: "openid email profile offline_access",
           callbackURL: `https://${domain}/api/callback`,
         },
@@ -161,7 +161,7 @@ export async function setupAuth(app: Express) {
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
       res.redirect(
-        client.buildEndSessionUrl(config, {
+        client.buildEndSessionUrl(config!, {
           client_id: process.env.REPL_ID!,
           post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
         }).href
@@ -172,7 +172,8 @@ export async function setupAuth(app: Express) {
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   // Check for session-based auth (email/password login)
-  if (req.session && req.session.userId) {
+  const session = req.session as any;
+  if (session && session.userId) {
     return next();
   }
 
@@ -196,7 +197,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
   try {
     const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
+    const tokenResponse = await client.refreshTokenGrant(config!, refreshToken);
     updateUserSession(user, tokenResponse);
     return next();
   } catch (error) {

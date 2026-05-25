@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { } from "@shared/schema";
+import { offers, coupons } from "@shared/schema";
 import type { Offer, Coupon } from "@shared/schema";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Search, ShoppingCart, User, Menu, X } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,13 +26,15 @@ export default function SiteHeader() {
   const { data: cartItems = [] } = useQuery({
     queryKey: ["cart"],
     queryFn: async () => {
-      const res = await fetch("/api/cart", { credentials: "include" });
-      return res.ok ? res.json() : [];
+      const res = await fetch("/api/cart", { credentials: "include", cache: "no-store" });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : data.items || [];
     },
     enabled: isAuthenticated,
   });
 
-  const cartCount = cartItems.reduce((acc: number, item: any) => acc + item.quantity, 0);
+  const cartCount = cartItems.reduce((acc: number, item: any) => acc + Number(item.quantity || 0), 0);
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -47,7 +49,7 @@ export default function SiteHeader() {
     <header className="sticky top-0 z-50 bg-white shadow-sm transition-all duration-300">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between h-28 md:h-36 px-4 lg:px-8">
-          <Link href="/" className="flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-4" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: "instant" })}>
             <div className="w-20 h-20 md:w-28 md:h-28 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden p-1 border-2 border-green-50 transition-transform hover:scale-105">
               <img 
                 src={settings.logoUrl || logoImage} 
@@ -55,24 +57,85 @@ export default function SiteHeader() {
                 className="w-full h-full object-contain"
               />
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight tracking-tight">{settings.brandName}</h1>
-              <p className="text-[10px] md:text-xs text-green-600 font-medium -mt-0.5">Pure. Fresh. Daily.</p>
+            <div>
+              <h1 className="text-sm sm:text-lg md:text-xl font-bold text-gray-900 leading-tight tracking-tight">{settings.brandName}</h1>
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-green-600 font-medium -mt-0.5">Pure. Fresh. Daily.</p>
             </div>
           </Link>
 
           <nav className="hidden lg:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`text-sm font-medium transition-colors hover:text-green-600 ${
-                  location === link.href ? "text-green-600" : "text-gray-700"
+            <Link
+              href="/"
+              className={`text-sm font-medium transition-colors hover:text-green-600 ${
+                location === "/" ? "text-green-600" : "text-gray-700"
+              }`}
+            >
+              Home
+            </Link>
+            <Link
+              href="/about"
+              className={`text-sm font-medium transition-colors hover:text-green-600 ${
+                location === "/about" ? "text-green-600" : "text-gray-700"
+              }`}
+            >
+              About Us
+            </Link>
+            <Link
+              href="/shop"
+              className={`text-sm font-medium transition-colors hover:text-green-600 ${
+                location.startsWith("/shop") ? "text-green-600" : "text-gray-700"
+              }`}
+            >
+              Products
+            </Link>
+            <Link
+              href="/subscription"
+              className={`text-sm font-medium transition-colors hover:text-green-600 ${
+                location.startsWith("/subscription") ? "text-green-600" : "text-gray-700"
+              }`}
+            >
+              Subscription
+            </Link>
+            
+            {/* Media Dropdown */}
+            <div className="relative group">
+              <button
+                className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-green-600 ${
+                  location.startsWith("/blog") || 
+                  location.startsWith("/video-blog") || 
+                  location.startsWith("/image-gallery") || 
+                  location.startsWith("/video-gallery")
+                    ? "text-green-600" 
+                    : "text-gray-700"
                 }`}
               >
-                {link.label}
-              </Link>
-            ))}
+                Media
+                <ChevronDown className="w-4.5 h-4.5 transition-transform group-hover:rotate-180" />
+              </button>
+              <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-2 hidden group-hover:block transition-all z-50">
+                <Link href="/blog" className={`block px-4 py-2 text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/blog") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
+                  Blog
+                </Link>
+                <Link href="/video-blog" className={`block px-4 py-2 text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/video-blog") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
+                  Video Blog
+                </Link>
+                <Link href="/image-gallery" className={`block px-4 py-2 text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/image-gallery") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
+                  Image Gallery
+                </Link>
+                <Link href="/video-gallery" className={`block px-4 py-2 text-sm transition-colors hover:bg-green-50 hover:text-green-600 ${location.startsWith("/video-gallery") ? "text-green-600 font-semibold" : "text-gray-700"}`}>
+                  Video Gallery
+                </Link>
+              </div>
+            </div>
+
+            <Link
+              href="/contact"
+              className={`text-sm font-medium transition-colors hover:text-green-600 ${
+                location === "/contact" ? "text-green-600" : "text-gray-700"
+              }`}
+            >
+              Contact Us
+            </Link>
           </nav>
 
           <div className="flex items-center gap-2 md:gap-4">
@@ -151,13 +214,23 @@ export default function SiteHeader() {
               </form>
               
               <nav className="space-y-1">
-                {navLinks.map((link) => (
+                {[
+                  { href: "/", label: "Home" },
+                  { href: "/about", label: "About Us" },
+                  { href: "/shop", label: "Products" },
+                  { href: "/subscription", label: "Subscription" },
+                  { href: "/blog", label: "Blog" },
+                  { href: "/video-blog", label: "Video Blog" },
+                  { href: "/image-gallery", label: "Image Gallery" },
+                  { href: "/video-gallery", label: "Video Gallery" },
+                  { href: "/contact", label: "Contact Us" }
+                ].map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className={`block px-4 py-3 text-base font-medium rounded-xl transition-colors ${
-                      location === link.href
+                      location === link.href || (link.href !== "/" && location.startsWith(link.href))
                         ? "bg-green-50 text-green-700"
                         : "text-gray-700 hover:bg-gray-50"
                     }`}

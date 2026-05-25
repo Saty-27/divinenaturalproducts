@@ -24,26 +24,29 @@ const createOrderSchema = z.object({
 // Create order from cart
 router.post("/", async (req: any, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = req.session?.userId || req.user?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     const payload = createOrderSchema.parse(req.body);
 
-    // Get cart items using direct query
-    const userCart = await db.query.cart.findFirst({
-      where: eq(cartTable.userId, userId),
-    });
+    // Older sessions can leave duplicate cart rows behind, so collect every cart for this user.
+    const userCarts = await db.select().from(cartTable).where(eq(cartTable.userId, userId));
 
-    if (!userCart) {
+    if (userCarts.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
-    // Get cart items
-    const cartItemsList = await db.query.cartItems.findMany({
-      where: eq(cartItems.cartId, userCart.id),
-    });
+    const cartItemsList = (
+      await Promise.all(
+        userCarts.map((userCart) =>
+          db.query.cartItems.findMany({
+            where: eq(cartItems.cartId, userCart.id),
+          })
+        )
+      )
+    ).flat();
 
     if (cartItemsList.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
@@ -52,12 +55,13 @@ router.post("/", async (req: any, res) => {
     // Calculate total
     let totalAmount = 0;
     for (const item of cartItemsList) {
-      totalAmount += parseFloat(item.price) * item.quantity;
+      totalAmount += Number(item.price || 0) * Number(item.quantity || 0);
     }
 
     // Get today's date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayDate = today.toISOString().split("T")[0];
 
     // Normalize payment method
     let paymentMethod = payload.paymentMethod;
@@ -76,8 +80,8 @@ router.post("/", async (req: any, res) => {
         paymentMethod,
         paymentStatus: payload.paymentStatus,
         status: "PLACED",
-        deliveryDate: today,
-        liters: cartItemsList.reduce((sum, item) => sum + item.quantity, 0),
+        deliveryDate: todayDate,
+        liters: cartItemsList.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
       })
       .returning();
 
@@ -86,29 +90,32 @@ router.post("/", async (req: any, res) => {
       await db.insert(orderItems).values({
         orderId: newOrder.id,
         productId: item.productId,
-        quantity: item.quantity,
-        price: item.price,
-        totalPrice: (parseFloat(item.price) * item.quantity).toString(),
+        quantity: Number(item.quantity || 0),
+        price: item.price || "0",
+        totalPrice: (Number(item.price || 0) * Number(item.quantity || 0)).toString(),
       });
 
       // Get current product stock and reduce it
-      const product = await db.query.products.findFirst({
-        where: eq(products.id, item.productId),
-      });
+      const product = item.productId
+        ? await db.query.products.findFirst({
+            where: eq(products.id, item.productId),
+          })
+        : null;
       
       if (product) {
-        const newStock = Math.max(0, product.stock - item.quantity);
+        const newStock = Math.max(0, Number(product.stock || 0) - Number(item.quantity || 0));
         await db
           .update(products)
           .set({ stock: newStock })
-          .where(eq(products.id, item.productId));
+          .where(eq(products.id, item.productId!));
       }
     }
 
-    // Clear cart
-    await db.delete(cartItems).where(eq(cartItems.cartId, userCart.id));
+    // Clear every cart row for the user before responding so every follow-up cart read is empty.
+    await Promise.all(userCarts.map((userCart) => db.delete(cartItems).where(eq(cartItems.cartId, userCart.id))));
 
-    res.status(201).json(newOrder);
+    res.set("Cache-Control", "no-store");
+    res.status(201).json({ ...newOrder, cartCleared: true, clearedCartIds: userCarts.map((cart) => cart.id) });
   } catch (error: any) {
     console.error("Error creating order:", error);
     if (error.name === "ZodError") {
@@ -121,7 +128,7 @@ router.post("/", async (req: any, res) => {
 // GET orders
 router.get("/", async (req: any, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = req.session?.userId || req.user?.claims?.sub;
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -142,9 +149,11 @@ router.get("/", async (req: any, res) => {
         
         const itemsWithProducts = await Promise.all(
           items.map(async (item) => {
-            const product = await db.query.products.findFirst({
-              where: eq(products.id, item.productId),
-            });
+            const product = item.productId
+              ? await db.query.products.findFirst({
+                  where: eq(products.id, item.productId),
+                })
+              : null;
             return { ...item, product };
           })
         );
@@ -153,6 +162,7 @@ router.get("/", async (req: any, res) => {
       })
     );
 
+    res.set("Cache-Control", "no-store");
     res.json(ordersWithItems);
   } catch (error) {
     console.error("Error fetching orders:", error);
@@ -163,7 +173,7 @@ router.get("/", async (req: any, res) => {
 // GET single order
 router.get("/:id", async (req: any, res) => {
   try {
-    const userId = req.session?.userId;
+    const userId = req.session?.userId || req.user?.claims?.sub;
     const orderId = parseInt(req.params.id);
 
     if (!userId) {
@@ -186,13 +196,16 @@ router.get("/:id", async (req: any, res) => {
 
     const itemsWithProducts = await Promise.all(
       items.map(async (item) => {
-        const product = await db.query.products.findFirst({
-          where: eq(products.id, item.productId),
-        });
+        const product = item.productId
+          ? await db.query.products.findFirst({
+              where: eq(products.id, item.productId),
+            })
+          : null;
         return { ...item, product };
       })
     );
 
+    res.set("Cache-Control", "no-store");
     res.json({ ...order, items: itemsWithProducts });
   } catch (error) {
     console.error("Error fetching order:", error);
