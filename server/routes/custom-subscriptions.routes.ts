@@ -98,10 +98,12 @@ router.post("/", requireAdminAccess, async (req, res) => {
     if (parseFloat(price) < 0) {
       return res.status(400).json({ message: "Price cannot be negative" });
     }
+    const parsedProductId = productId && !isNaN(parseInt(productId)) ? parseInt(productId) : null;
+    const parsedSortOrder = sortOrder && !isNaN(parseInt(sortOrder)) ? parseInt(sortOrder) : 0;
 
     const newPlan = await db.insert(customSubscriptionPlans).values({
       title,
-      productId: productId ? parseInt(productId) : null,
+      productId: parsedProductId,
       customProductName: customProductName || null,
       image: image || null,
       quantity,
@@ -116,9 +118,8 @@ router.post("/", requireAdminAccess, async (req, res) => {
       durationOptions: durationOptions || [],
       status: status || "active",
       isFeatured: !!isFeatured,
-      sortOrder: sortOrder ? parseInt(sortOrder) : 0,
+      sortOrder: parsedSortOrder,
     }).returning();
-
     res.status(201).json({ message: "Subscription plan created successfully", plan: newPlan[0] });
   } catch (error) {
     console.error("Error creating custom subscription plan:", error);

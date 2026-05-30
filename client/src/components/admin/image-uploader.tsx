@@ -41,6 +41,7 @@ export default function ImageUploader({
       const res = await fetch(uploadUrl, {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
 
       if (!res.ok) throw new Error("Upload failed");

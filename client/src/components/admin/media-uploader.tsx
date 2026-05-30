@@ -67,6 +67,7 @@ export default function MediaUploader({
       const response = await fetch("/api/admin/media/upload", {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
 
       if (!response.ok) {
